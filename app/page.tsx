@@ -65,6 +65,36 @@ const formatRupiah = (num: number) => {
   }).format(num);
 };
 
+// DATA BAWAAN AWAL DARI CATATAN CUSTOMER
+const INITIAL_ITEMS: Item[] = [
+  { id: "init-1", name: "Biled aes", stock: 20, min: 15, price: 55000 },
+  { id: "init-2", name: "Biled albredt", stock: 15, min: 15, price: 75000 },
+  { id: "init-3", name: "Rgb 5 vol", stock: 30, min: 15, price: 15000 },
+  { id: "init-4", name: "Shround", stock: 10, min: 15, price: 0 },
+  { id: "init-5", name: "Stepdown 8A", stock: 8, min: 15, price: 0 },
+  { id: "init-6", name: "Modul dmx", stock: 12, min: 15, price: 0 },
+  { id: "init-7", name: "Panel p5", stock: 6, min: 15, price: 0 },
+  { id: "init-8", name: "Panel p4", stock: 4, min: 15, price: 0 },
+  { id: "init-9", name: "Controller d16", stock: 5, min: 15, price: 0 },
+  { id: "init-10", name: "Controled wf2", stock: 7, min: 15, price: 0 },
+  { id: "init-11", name: "Rgb gerak", stock: 14, min: 15, price: 0 },
+  { id: "init-12", name: "Led rol pink", stock: 40, min: 15, price: 0 },
+  { id: "init-13", name: "Ped rol merah", stock: 35, min: 15, price: 0 },
+  { id: "init-14", name: "Led rol putih", stock: 25, min: 15, price: 0 },
+  { id: "init-15", name: "Led rol warm white", stock: 18, min: 15, price: 0 },
+  { id: "init-16", name: "LEd rol blue ice", stock: 22, min: 15, price: 0 },
+  { id: "init-17", name: "Led rol biru", stock: 33, min: 15, price: 0 },
+  { id: "init-18", name: "Biled 1.5 inch", stock: 50, min: 15, price: 0 },
+  { id: "init-19", name: "Lampu tembak 3 mata", stock: 7, min: 15, price: 0 },
+  { id: "init-20", name: "Rotator pink", stock: 4, min: 15, price: 0 },
+  { id: "init-21", name: "Rotator blue ice", stock: 5, min: 15, price: 0 },
+  { id: "init-22", name: "Led cob 9 mata blue ice", stock: 11, min: 15, price: 0 },
+  { id: "init-23", name: "Led cob g mata pink", stock: 9, min: 15, price: 0 },
+  { id: "init-24", name: "Led cob 9 mata biru", stock: 13, min: 15, price: 0 },
+  { id: "init-25", name: "Led cob 9 mata hijau", stock: 8, min: 15, price: 0 },
+  { id: "init-26", name: "Steodown 5A", stock: 16, min: 15, price: 0 }
+];
+
 export default function StockPage() {
   const [items, setItems]   = useState<Item[]>([]);
   const [logs, setLogs]     = useState<LogEntry[]>([]);
@@ -89,14 +119,22 @@ export default function StockPage() {
   const [chartView, setChartView] = useState<"all" | "low">("all");
   const toastCounter = useRef(0);
 
+  // LOAD DATABASE LOKAL JIKA ADA, JIKA KOSONG OTOMATIS PAKAI INITIAL_ITEMS
   useEffect(() => {
     try {
       const savedItems = localStorage.getItem("inv-items-v5");
       const savedLogs  = localStorage.getItem("inv-logs-v5");
-      if (savedItems) setItems(JSON.parse(savedItems));
+      
+      if (savedItems && JSON.parse(savedItems).length > 0) {
+        setItems(JSON.parse(savedItems));
+      } else {
+        setItems(INITIAL_ITEMS);
+        localStorage.setItem("inv-items-v5", JSON.stringify(INITIAL_ITEMS));
+      }
+
       if (savedLogs) setLogs(JSON.parse(savedLogs));
     } catch {
-      setLogs([]);
+      setItems(INITIAL_ITEMS);
     }
     setReady(true);
   }, []);
@@ -268,7 +306,6 @@ export default function StockPage() {
         *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
         html, body { background:#0a0a12; min-height: 100vh; -webkit-font-smoothing: antialiased; }
 
-        /* Scrollbar custom */
         ::-webkit-scrollbar { width:6px; height:6px; }
         ::-webkit-scrollbar-track { background:transparent; }
         ::-webkit-scrollbar-thumb { background:#3B1F8C; border-radius:99px; }
@@ -278,17 +315,14 @@ export default function StockPage() {
 
         .card  { animation: fadeUp .4s ease both; margin-bottom: 24px; }
         
-        /* Bar chart animation & sizing */
         .bar-fill { transition: width .5s cubic-bezier(.4,0,.2,1); }
         .bar-container { cursor: pointer; transition: transform 0.2s; }
         .bar-container:hover { transform: scaleX(1.002); }
 
-        /* Button click feedback */
         .btn-qty { transition: background .15s, transform .1s; -webkit-tap-highlight-color: transparent; }
         .btn-qty:active { transform: scale(.88); }
         .btn-action-mobile:active { transform: scale(.9); background: rgba(255,255,255,0.1); }
 
-        /* Modal styling */
         .modal-overlay {
           position:fixed; inset:0; z-index:200;
           background:rgba(0,0,0,.8);
@@ -312,7 +346,6 @@ export default function StockPage() {
         .toast-item { animation: slideIn .3s ease; }
         .chip-active { background:#7C3AED !important; color:#fff !important; }
 
-        /* Grid statistik responsive */
         .stats-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
@@ -320,7 +353,6 @@ export default function StockPage() {
           margin-bottom: 24px;
         }
 
-        /* Responsive Breakpoints */
         .desktop-table { display: block; }
         .mobile-list { display: none; }
         .table-action-header { display: flex; alignItems: center; gap: 12px; margin-left: auto; }
@@ -344,7 +376,7 @@ export default function StockPage() {
         }
       `}</style>
 
-      {/* ── HEADER NAVBAR (BERSIH, LEGA, LOGO AMAN) ── */}
+      {/* ── HEADER NAVBAR MURNI LOGO & BRAND ── */}
       <header style={S.header}>
         <div style={S.headerInner}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -360,7 +392,6 @@ export default function StockPage() {
               <span style={{ color: "#FBBF24", marginLeft: "4px" }}>AUTOLAMP</span>
             </div>
           </div>
-          <span style={{ fontSize: 11, color: "#4A4A7A", fontWeight: 500 }} className="hide-sm">-</span>
         </div>
       </header>
 
@@ -413,17 +444,15 @@ export default function StockPage() {
           </div>
         </section>
 
-        {/* 3. Manajemen Stok (PENCARIAN & TAMBAH BARANG DIPINDAH KE SINI) */}
+        {/* 3. Manajemen Stok */}
         <section className="card" style={{ ...S.card, padding:0, overflow:"hidden" }}>
           
-          {/* Header Tabel Utama */}
           <div style={{ padding: "20px 20px 14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, borderBottom: "1px solid rgba(139,92,246,0.08)" }}>
             <div>
               <div style={S.cardTitle}>Manajemen Stok Utama Toko</div>
               <div style={S.cardSub}>Kelola jumlah kuantitas, harga, dan batas aman item</div>
             </div>
 
-            {/* Tempat Baru: Mengisi area kosong sebelah kanan secara presisi */}
             <div className="table-action-header">
               <div style={S.searchWrap}>
                 <input
@@ -441,7 +470,7 @@ export default function StockPage() {
             </div>
           </div>
 
-          {/* LAYOUT DESKTOP: Berbentuk Tabel */}
+          {/* LAYOUT DESKTOP */}
           <div className="desktop-table">
             <div style={{ width: "100%", overflowX: "auto" }}>
               <div style={{ minWidth: 800 }}>
@@ -479,7 +508,7 @@ export default function StockPage() {
             </div>
           </div>
 
-          {/* LAYOUT MOBILE HP: Berubah Menjadi Card List */}
+          {/* LAYOUT MOBILE HP */}
           <div className="mobile-list">
             {filtered.map((it) => {
               const h = stockHealth(it.stock, it.min);
