@@ -94,7 +94,6 @@ export default function StockPage() {
     try {
       const savedItems = localStorage.getItem("inv-items-v5");
       const savedLogs  = localStorage.getItem("inv-logs-v5");
-      
       if (savedItems) setItems(JSON.parse(savedItems));
       if (savedLogs) setLogs(JSON.parse(savedLogs));
     } catch {
@@ -269,7 +268,7 @@ export default function StockPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
-        html, body { height: 100vh; background:#0a0a12; overflow: hidden; }
+        html, body { background:#0a0a12; min-height: 100vh; }
 
         ::-webkit-scrollbar { width:6px; height:6px; }
         ::-webkit-scrollbar-track { background:transparent; }
@@ -279,7 +278,7 @@ export default function StockPage() {
         @keyframes fadeUp  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
         @keyframes slideIn { from{opacity:0;transform:translateX(60px)} to{opacity:1;transform:translateX(0)} }
 
-        .card  { animation: fadeUp .4s ease both; }
+        .card  { animation: fadeUp .4s ease both; margin-bottom: 24px; }
         .row   { transition: background .15s; }
         .row:hover { background: rgba(139,92,246,.07) !important; }
 
@@ -316,14 +315,26 @@ export default function StockPage() {
 
         .stock-inp:focus { outline:none; border-color:#7C3AED !important; }
 
+        /* Handle Responsif Grid Atas */
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+
+        @media (max-width:1024px) {
+          .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
         @media (max-width:768px) {
           .chart-label { font-size:11px !important; max-width:90px !important; width:90px !important; }
-          .row { padding: 10px 12px !important; gap: 8px !important; }
+          .row { padding: 12px 14px !important; gap: 8px !important; }
         }
         @media (max-width:640px) {
+          .stats-grid { grid-template-columns: 1fr; gap: 12px; }
           .hide-sm { display:none !important; }
           .table-scrollable { overflow-x: auto; WebkitOverflowScrolling: touch; }
-          .search-input-box { width: 100px !important; }
+          .search-input-box { width: 110px !important; }
         }
       `}</style>
 
@@ -331,7 +342,7 @@ export default function StockPage() {
       <header style={S.header}>
         <div style={S.headerInner}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div style={{ fontFamily: "'Inter', sans-serif", fontWeight: 800, fontSize: "18px", letterSpacing: "0.5px" }}>
+            <div style={{ fontFamily: "'Inter', sans-serif", fontWeight: 800, fontSize: "19px", letterSpacing: "0.5px" }}>
               <span style={{ color: "#ffffff" }}>LINGGA</span>
               <span style={{ color: "#FBBF24", marginLeft: "6px" }}>AUTOLAMP</span>
             </div>
@@ -349,143 +360,138 @@ export default function StockPage() {
             </div>
             <button style={S.btnAdd} onClick={() => setShowModal(true)}>
               <span style={{ fontSize:20, lineHeight:1, fontWeight:"bold" }}>+</span>
-              <span className="hide-sm" style={{ marginLeft: 4 }}>Tambah</span>
+              <span className="hide-sm" style={{ marginLeft: 6 }}>Tambah Barang</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* ── LAYOUT DASHBOARD 1 SCREEN UTUH ── */}
+      {/* ── LAYOUT DAN STRUKTUR VERTIKAL KE BAWAH (DIPERLEBAR) ── */}
       <main style={S.main}>
 
-        {/* 1. Baris Kumpulan Statistik */}
-        <div style={S.statsRow}>
+        {/* Bagian 1: Kumpulan Kotak Statistik */}
+        <div className="stats-grid">
           <StatCard label="Jenis Barang" value={totalTypes.toLocaleString("id-ID")} sub="item terdaftar" accent="#8B5CF6" />
           <StatCard label="Total Stok" value={totalStock.toLocaleString("id-ID")} sub="unit tersedia" accent="#A78BFA" />
           <StatCard label="Stok Rendah" value={lowCount.toLocaleString("id-ID")} sub="perlu order lagi" accent={lowCount > 0 ? "#F59E0B" : "#22C55E"} />
           <StatCard label="Nilai Inventory" value={formatRupiah(totalValue)} sub="total nilai modal" accent="#10B981" />
         </div>
 
-        {/* 2. Grid Belahan Tengah */}
-        <div style={S.gridCenter}>
-          
-          {/* Sisi Kiri: Tabel Utama Manajemen Stok */}
-          <section className="card" style={{ ...S.card, padding:0, overflow:"hidden", display:"flex", flexDirection:"column" }}>
-            <div style={{ padding:"16px 20px 10px" }}>
-              <div style={S.cardTitle}>Manajemen Stok Utama Toko</div>
-            </div>
-            <div className="table-scrollable" style={{ flex: 1, overflowY: "auto" }}>
-              <div style={{ minWidth: 650 }}>
-                <div style={S.tableHeader}>
-                  <span style={S.colName}>Nama Barang</span>
-                  <span style={S.colPrice}>Harga</span>
-                  <span style={S.colQtyContainer}>Ubah Stok</span>
-                  <span style={S.colMin}>Min</span>
-                  <span style={S.colStatus}>Status</span>
-                  <span style={S.colActions}>Aksi</span>
-                </div>
-                <div>
-                  {filtered.map((it) => {
-                    const h = stockHealth(it.stock, it.min);
-                    return (
-                      <div key={it.id} className="row" style={{ ...S.tableRow, borderLeft:`4px solid ${HEALTH_COLOR[h]}` }}>
-                        <div style={S.colName}><span style={{ fontSize:13, color:"#E9E3FF", fontWeight:500 }}>{it.name}</span></div>
-                        <div style={S.colPrice}>{formatRupiah(it.price)}</div>
-                        <div style={S.colQtyContainer}>
-                          <button className="btn-qty" onClick={() => decrement(it.id)} style={SF.btnQty("#EF4444","rgba(239,68,68,.15)")}>−</button>
-                          <input className="stock-inp inp" type="number" value={it.stock} onChange={e => editStock(it.id, e.target.value)} style={S.stockInp} />
-                          <button className="btn-qty" onClick={() => increment(it.id)} style={SF.btnQty("#22C55E","rgba(34,197,94,.15)")}>+</button>
-                        </div>
-                        <div style={S.colMin}>{it.min}</div>
-                        <div style={S.colStatus}><span style={SF.badge(h)}>{h === "ok" ? "✓ Aman" : h === "low" ? "⚠ Rendah" : "✕ Kritis"}</span></div>
-                        <div style={S.colActions}>
-                          <button onClick={() => openEditModal(it)} style={S.btnEdit}>✏</button>
-                          <button onClick={() => removeItem(it.id, it.name)} style={S.btnDel}>🗑</button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+        {/* Bagian 2: Tabel Utama Manajemen Stok */}
+        <section className="card" style={{ ...S.card, padding:0, overflow:"hidden" }}>
+          <div style={{ padding:"22px 24px 14px" }}>
+            <div style={S.cardTitle}>Manajemen Stok Utama Toko</div>
+          </div>
+          <div className="table-scrollable">
+            <div style={{ minWidth: 780 }}>
+              <div style={S.tableHeader}>
+                <span style={S.colName}>Nama Barang</span>
+                <span style={S.colPrice}>Harga</span>
+                <span style={S.colQtyContainer}>Ubah Stok</span>
+                <span style={S.colMin}>Min</span>
+                <span style={S.colStatus}>Status</span>
+                <span style={S.colActions}>Aksi</span>
               </div>
-            </div>
-          </section>
-
-          {/* Sisi Kanan: Grafik Atas & Riwayat Log Bawah */}
-          <div style={S.rightColumn}>
-            
-            {/* Box Grafik Batas Stok */}
-            <section className="card" style={{ ...S.card, flex: 1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
-              <div style={{ ...S.cardHead, marginBottom: 12 }}>
-                <div>
-                  <div style={S.cardTitle}>Grafik Batas Stok</div>
-                </div>
-                <div style={{ display:"flex", gap:6 }}>
-                  {(["all","low"] as const).map(v => (
-                    <button
-                      key={v}
-                      className={`chip ${chartView === v ? "chip-active" : ""}`}
-                      style={SF.chip(chartView === v)}
-                      onClick={() => setChartView(v)}
-                    >
-                      {v === "all" ? "Semua" : "⚠ Rendah"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ flex: 1, overflowY: "auto", display:"flex", flexDirection:"column", gap:8, paddingRight: 4 }}>
-                {chartItems.map((it) => {
-                  const pct   = maxStock > 0 ? (it.stock / maxStock) * 100 : 0;
-                  const h     = stockHealth(it.stock, it.min);
+              <div>
+                {filtered.map((it) => {
+                  const h = stockHealth(it.stock, it.min);
                   return (
-                    <div key={it.id} className="bar-container" onClick={() => setSelectedChartItem(it)} style={{ display:"flex", alignItems:"center", gap:10 }}>
-                      <div className="chart-label" style={{ width:110, minWidth:80, flexShrink:0, fontSize:12, color:"#A78BFA", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", textAlign:"right" }}>{it.name}</div>
-                      <div style={{ flex:1, height:20, background:"rgba(255,255,255,.03)", borderRadius:5, overflow:"hidden", position:"relative" }}>
-                        <div className="bar-fill" style={{ height:"100%", width:`${pct}%`, background:`linear-gradient(90deg, ${HEALTH_COLOR[h]}CC, ${HEALTH_COLOR[h]})`, borderRadius:5, boxShadow:`0 0 10px ${HEALTH_GLOW[h]}` }} />
+                    <div key={it.id} className="row" style={{ ...S.tableRow, borderLeft:`4px solid ${HEALTH_COLOR[h]}` }}>
+                      <div style={S.colName}><span style={{ fontSize:14, color:"#E9E3FF", fontWeight:500 }}>{it.name}</span></div>
+                      <div style={S.colPrice}>{formatRupiah(it.price)}</div>
+                      <div style={S.colQtyContainer}>
+                        <button className="btn-qty" onClick={() => decrement(it.id)} style={SF.btnQty("#EF4444","rgba(239,68,68,.15)")}>−</button>
+                        <input className="stock-inp inp" type="number" value={it.stock} onChange={e => editStock(it.id, e.target.value)} style={S.stockInp} />
+                        <button className="btn-qty" onClick={() => increment(it.id)} style={SF.btnQty("#22C55E","rgba(34,197,94,.15)")}>+</button>
                       </div>
-                      <div style={{ width:30, textAlign:"right", flexShrink:0, fontSize:12, fontWeight:700, color: HEALTH_COLOR[h] }}>{it.stock}</div>
+                      <div style={S.colMin}>{it.min}</div>
+                      <div style={S.colStatus}><span style={SF.badge(h)}>{h === "ok" ? "✓ Aman" : h === "low" ? "⚠ Rendah" : "✕ Kritis"}</span></div>
+                      <div style={S.colActions}>
+                        <button onClick={() => openEditModal(it)} style={S.btnEdit}>✏</button>
+                        <button onClick={() => removeItem(it.id, it.name)} style={S.btnDel}>🗑</button>
+                      </div>
                     </div>
                   );
                 })}
               </div>
-            </section>
-
-            {/* Box Riwayat Aktivitas Log Toko */}
-            <section className="card" style={{ ...S.card, flex: 1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <div style={S.cardTitle}>Riwayat Aktivitas Log Toko</div>
-                {logs.length > 0 && (
-                  <button onClick={clearLogs} style={S.btnResetLog}>Bersihkan</button>
-                )}
-              </div>
-              <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, paddingRight: 4 }}>
-                {logs.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "20px 0", color: "#4A4A7A", fontSize: 12 }}>Belum ada log masuk.</div>
-                ) : (
-                  logs.map((log) => {
-                    const sty = LOG_STYLES[log.type] || LOG_STYLES.edit;
-                    return (
-                      <div key={log.id} style={S.logRow}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: "85px" }}>
-                          <span style={SF.logBadge(sty.bg, sty.text)}>{sty.label}</span>
-                          <span style={{ fontSize: 9, color: "#4A4A7A" }}>{log.timestamp.split(' · ')[1] || log.timestamp}</span>
-                        </div>
-                        <div style={{ flex: 1, fontSize: 12, lineHeight: "1.3" }}>
-                          <span style={{ color: "#A78BFA", fontWeight: 600 }}>{log.itemName}</span> {log.action}
-                          {log.details && <div style={{ fontSize: 11, color: "#5B5B8A", marginTop: 1 }}>{log.details}</div>}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </section>
-
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* 3. Footer */}
-        <footer style={S.footer}>© 2026 LINGGA AUTOLAMP · Dashboard Manajemen Terintegrasi</footer>
+        {/* Bagian 3: Grafik Batas Stok */}
+        <section className="card" style={S.card}>
+          <div style={{ ...S.cardHead, marginBottom: 20 }}>
+            <div>
+              <div style={S.cardTitle}>Grafik Batas Stok</div>
+              <div style={S.cardSub}>Semua {totalTypes} item · Klik grafik untuk info lengkap</div>
+            </div>
+            <div style={{ display:"flex", gap:6 }}>
+              {(["all","low"] as const).map(v => (
+                <button
+                  key={v}
+                  className={`chip ${chartView === v ? "chip-active" : ""}`}
+                  style={SF.chip(chartView === v)}
+                  onClick={() => setChartView(v)}
+                >
+                  {v === "all" ? "Tampilkan Semua" : "⚠ Stok Rendah"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+            {chartItems.map((it) => {
+              const pct   = maxStock > 0 ? (it.stock / maxStock) * 100 : 0;
+              const h     = stockHealth(it.stock, it.min);
+              return (
+                <div key={it.id} className="bar-container" onClick={() => setSelectedChartItem(it)} style={{ display:"flex", alignItems:"center", gap:16 }}>
+                  <div className="chart-label" style={{ width:160, minWidth:110, flexShrink:0, fontSize:13, color:"#8B8BAD", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", textAlign:"right" }}>{it.name}</div>
+                  <div style={{ flex:1, height:24, background:"rgba(255,255,255,.02)", borderRadius:6, overflow:"hidden", position:"relative" }}>
+                    <div className="bar-fill" style={{ height:"100%", width:`${pct}%`, background:`linear-gradient(90deg, ${HEALTH_COLOR[h]}CC, ${HEALTH_COLOR[h]})`, borderRadius:6, boxShadow:`0 0 12px ${HEALTH_GLOW[h]}` }} />
+                  </div>
+                  <div style={{ width:45, textAlign:"right", flexShrink:0, fontSize:13, fontWeight:700, color: HEALTH_COLOR[h] }}>{it.stock}</div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Bagian 4: Riwayat Aktivitas Log Toko */}
+        <section className="card" style={S.card}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+            <div>
+              <div style={S.cardTitle}>Riwayat Aktivitas Log Toko</div>
+              <div style={S.cardSub}>Mencatat seluruh aktivitas perubahan secara real-time tanpa batas</div>
+            </div>
+            {logs.length > 0 && (
+              <button onClick={clearLogs} style={S.btnResetLog}>Bersihkan Log</button>
+            )}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {logs.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "30px 0", color: "#4A4A7A", fontSize: 13 }}>Belum ada riwayat aktivitas log di database pusat.</div>
+            ) : (
+              logs.map((log) => {
+                const sty = LOG_STYLES[log.type] || LOG_STYLES.edit;
+                return (
+                  <div key={log.id} style={S.logRow}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: "220px", flexShrink:0 }}>
+                      <span style={SF.logBadge(sty.bg, sty.text)}>{sty.label}</span>
+                      <span style={{ fontSize: 12, color: "#4A4A7A" }}>{log.timestamp}</span>
+                    </div>
+                    <div style={{ flex: 1, fontSize: 13, lineHeight: "1.4" }}>
+                      <span style={{ color: "#A78BFA", fontWeight: 600 }}>{log.itemName}</span> {log.action}
+                      {log.details && <span style={{ fontSize: 12, color: "#5B5B8A", marginLeft: 8, fontStyle: "italic" }}>({log.details})</span>}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer style={S.footer}>© 2026 LINGGA AUTOLAMP · Sistem Dashboard Manajemen Terintegrasi</footer>
       </main>
 
       {/* ── MODAL TAMBAH BARANG ── */}
@@ -556,57 +562,54 @@ export default function StockPage() {
 
 function StatCard({ label, value, sub, accent }: { label: string; value: string | number; sub: string; accent: string; }) {
   return (
-    <div className="card" style={{ flex:1, background:"#13132a", border:"1px solid rgba(139,92,246,.15)", borderRadius:12, padding:"12px 16px", display:"flex", alignItems:"center" }}>
+    <div className="card" style={{ background:"#13132a", border:"1px solid rgba(139,92,246,.15)", borderRadius:12, padding:"16px 20px", display:"flex", alignItems:"center", marginBottom:0 }}>
       <div>
-        <div style={{ fontSize:10, color:"#5B5B8A", textTransform:"uppercase", fontWeight:600 }}>{label}</div>
-        <div style={{ fontSize:18, fontWeight:700, color:"#fff", marginTop:1 }}>{value}</div>
-        <div style={{ fontSize:10, color:accent, marginTop:1 }}>{sub}</div>
+        <div style={{ fontSize:11, color:"#5B5B8A", textTransform:"uppercase", fontWeight:600, letterSpacing:"0.5px" }}>{label}</div>
+        <div style={{ fontSize:22, fontWeight:700, color:"#fff", marginTop:4 }}>{value}</div>
+        <div style={{ fontSize:11, color:accent, marginTop:2 }}>{sub}</div>
       </div>
     </div>
   );
 }
 
-// ── KELOMPOK 1: Objek Properti Style CSS Murni Murni ──
+// ── KELOMPOK 1: Objek Properti Style CSS Murni murni (Lebas dari Error TypeScript) ──
 const S: Record<string, React.CSSProperties> = {
-  root: { height:"100vh", background:"#0a0a12", fontFamily:"'Inter', sans-serif", color:"#E9E3FF", display:"flex", flexDirection:"column" },
-  header: { background:"rgba(13,13,26,.96)", borderBottom:"1px solid rgba(139,92,246,.2)", flexShrink: 0 },
-  headerInner: { maxWidth: "1280px", margin:"0 auto", padding:"12px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" },
-  searchWrap: { display:"flex", alignItems:"center", background:"rgba(139,92,246,.06)", border:"1px solid rgba(139,92,246,.15)", borderRadius:8, padding:"4px 10px" },
-  searchInp: { background:"transparent", border:"none", color:"#fff", width:110, fontSize: 13 },
-  btnAdd: { padding:"6px 14px", background:"linear-gradient(135deg,#7C3AED,#6025C0)", color:"#fff", border:"none", borderRadius:8, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", fontSize:13 },
-  main: { maxWidth: "1280px", width: "100%", margin:"0 auto", padding:"16px 20px", flex: 1, display:"flex", flexDirection:"column", gap:14, overflow:"hidden" },
-  statsRow: { display:"flex", gap:12, flexShrink: 0 },
-  gridCenter: { flex: 1, display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 14, overflow: "hidden" },
-  rightColumn: { display: "flex", flexDirection: "column", gap: 14, overflow: "hidden" },
-  card: { background:"#13132a", border:"1px solid rgba(139,92,246,.15)", borderRadius:14, padding:"16px" },
-  cardHead: { display:"flex", justifyContent:"space-between", alignItems: "center" },
-  cardTitle: { fontSize:14, fontWeight:700, color:"#E9E3FF" },
-  cardSub: { fontSize:11, color:"#5B5B8A", marginTop:2 },
-  colName: { flex: "2 1 180px", display: "flex", alignItems: "center" },
-  colPrice: { width: 110, color: "#10B981", fontWeight: 600, fontSize: 13 },
-  colQtyContainer: { width: 110, display: "flex", alignItems: "center", gap: 4 },
-  colMin: { width: 50, textAlign: "center", color: "#8B8BAD", fontSize: 13 },
-  colStatus: { width: 80, display: "flex" },
-  colActions: { width: 60, display: "flex", gap: 8, justifyContent: "flex-end" },
-  tableHeader: { display:"flex", padding:"10px 16px", borderBottom:"1px solid rgba(139,92,246,.15)", fontSize:11, color:"#5B5B8A", fontWeight:700, gap:8, background: "rgba(255,255,255,0.01)" },
-  tableRow: { display:"flex", alignItems:"center", padding:"10px 16px", gap:8, borderBottom:"1px solid rgba(139,92,246,.06)" },
-  stockInp: { width:36, height:28, borderRadius:8, background:"rgba(139,92,246,.06)", border:"1px solid rgba(139,92,246,.25)", color:"#fff", textAlign:"center", fontWeight:700, fontSize: 13 },
-  btnEdit: { background:"transparent", border:"none", color:"#A78BFA", cursor:"pointer", fontSize:14 },
-  btnDel: { background:"transparent", border:"none", color:"#EF4444", cursor:"pointer", fontSize:14 },
+  root: { minHeight:"100vh", background:"#0a0a12", fontFamily:"'Inter', sans-serif", color:"#E9E3FF" },
+  header: { background:"rgba(13,13,26,.96)", borderBottom:"1px solid rgba(139,92,246,.2)", position:"sticky", top:0, zIndex:100 },
+  headerInner: { maxWidth: "1440px", margin:"0 auto", padding:"14px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" },
+  searchWrap: { display:"flex", alignItems:"center", background:"rgba(139,92,246,.06)", border:"1px solid rgba(139,92,246,.15)", borderRadius:8, padding:"5px 12px" },
+  searchInp: { background:"transparent", border:"none", color:"#fff", width:150, fontSize: 13 },
+  btnAdd: { padding:"7px 16px", background:"linear-gradient(135deg,#7C3AED,#6025C0)", color:"#fff", border:"none", borderRadius:8, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", fontSize:13 },
+  main: { maxWidth: "1440px", width: "100%", margin:"0 auto", padding:"24px 24px" },
+  card: { background:"#13132a", border:"1px solid rgba(139,92,246,.15)", borderRadius:16, padding:"24px" },
+  cardHead: { display:"flex", justifyContent:"space-between", alignItems: "flex-start" },
+  cardTitle: { fontSize:16, fontWeight:700, color:"#E9E3FF" },
+  cardSub: { fontSize:12, color:"#5B5B8A", marginTop:4 },
+  colName: { flex: "2 1 240px", display: "flex", alignItems: "center" },
+  colPrice: { width: 140, color: "#10B981", fontWeight: 600, fontSize: 14 },
+  colQtyContainer: { width: 140, display: "flex", alignItems: "center", gap: 6 },
+  colMin: { width: 60, textAlign: "center", color: "#8B8BAD", fontSize: 14 },
+  colStatus: { width: 110, display: "flex" },
+  colActions: { width: 80, display: "flex", gap: 12, justifyContent: "flex-end" },
+  tableHeader: { display:"flex", padding:"14px 24px", borderBottom:"1px solid rgba(139,92,246,.15)", fontSize:12, color:"#5B5B8A", fontWeight:700, gap:12, background: "rgba(255,255,255,0.01)" },
+  tableRow: { display:"flex", alignItems:"center", padding:"14px 24px", gap:12, borderBottom:"1px solid rgba(139,92,246,.06)" },
+  stockInp: { width:44, height:30, borderRadius:8, background:"rgba(139,92,246,.06)", border:"1px solid rgba(139,92,246,.25)", color:"#fff", textAlign:"center", fontWeight:700, fontSize: 13 },
+  btnEdit: { background:"transparent", border:"none", color:"#A78BFA", cursor:"pointer", fontSize:15 },
+  btnDel: { background:"transparent", border:"none", color:"#EF4444", cursor:"pointer", fontSize:15 },
   btnClose: { background:"transparent", border:"none", color:"#8B8BAD", cursor:"pointer" },
   formLabel: { display:"flex", flexDirection:"column", gap:4, fontSize:12, color:"#8B8BAD" },
   formInput: { background:"#0a0a12", border:"1px solid rgba(139,92,246,.25)", borderRadius:8, padding:"10px", color:"#fff", fontSize:13 },
   btnCancel: { padding:"8px 16px", borderRadius:8, background:"transparent", color:"#8B8BAD", border:"1px solid rgba(139,92,246,.2)", cursor:"pointer", fontSize:13 },
   btnSave: { padding:"8px 18px", borderRadius:8, background:"linear-gradient(135deg,#7C3AED,#6025C0)", color:"#fff", border:"none", fontWeight:600, cursor:"pointer", fontSize:13 },
-  logRow: { display: "flex", alignItems: "flex-start", gap: 10, padding: "8px", background: "rgba(255,255,255,0.01)", border: "1px solid rgba(139,92,246,0.06)", borderRadius: "8px" },
-  btnResetLog: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "6px", color: "#FCA5A5", fontSize: "11px", cursor: "pointer", padding: "3px 8px" },
-  footer: { textAlign:"center", padding:"4px 0", color:"#4A4A7A", fontSize:11, flexShrink: 0 }
+  logRow: { display: "flex", alignItems: "center", gap: 16, padding: "12px 16px", background: "rgba(255,255,255,0.01)", border: "1px solid rgba(139,92,246,0.05)", borderRadius: "10px" },
+  btnResetLog: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "6px", color: "#FCA5A5", fontSize: "12px", cursor: "pointer", padding: "4px 12px" },
+  footer: { textAlign:"center", padding:"24px 0 10px", color:"#4A4A7A", fontSize:12 }
 };
 
-// ── KELOMPOK 2: Fungsi Pembuat Style Dinamis (Return React.CSSProperties) ──
+// ── KELOMPOK 2: Fungsi Pembuat Style Dinamis Berparameter (Return React.CSSProperties) ──
 const SF = {
-  chip: (active: boolean): React.CSSProperties => ({ padding:"4px 10px", borderRadius:6, fontSize:11, cursor:"pointer", background: active ? "#7C3AED" : "transparent", color: active ? "#fff" : "#8B8BAD", border:"1px solid rgba(139,92,246,.2)" }),
-  btnQty: (color: string, bg: string): React.CSSProperties => ({ width:28, height:28, borderRadius:8, background:bg, color:color, border:"none", fontSize:16, cursor:"pointer" }),
-  badge: (h: "ok"|"low"|"critical"): React.CSSProperties => ({ padding:"3px 8px", borderRadius:6, fontSize:11, fontWeight:600, background: h === "ok" ? "rgba(139,92,246,.12)" : h === "low" ? "rgba(245,158,11,.12)" : "rgba(239,68,68,.12)", color: h === "ok" ? "#A78BFA" : h === "low" ? "#FBBF24" : "#FCA5A5" }),
-  logBadge: (bg: string, text: string): React.CSSProperties => ({ padding: "2px 4px", borderRadius: "4px", fontSize: "9px", fontWeight: 700, background: bg, color: text, width: "75px", display:"inline-block", textAlign:"center" })
+  chip: (active: boolean): React.CSSProperties => ({ padding:"5px 12px", borderRadius:6, fontSize:12, cursor:"pointer", background: active ? "#7C3AED" : "transparent", color: active ? "#fff" : "#8B8BAD", border:"1px solid rgba(139,92,246,.2)", transition:"all 0.15s" }),
+  btnQty: (color: string, bg: string): React.CSSProperties => ({ width:30, height:30, borderRadius:8, background:bg, color:color, border:"none", fontSize:16, cursor:"pointer" }),
+  badge: (h: "ok"|"low"|"critical"): React.CSSProperties => ({ padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:600, display:"inline-block", background: h === "ok" ? "rgba(139,92,246,.12)" : h === "low" ? "rgba(245,158,11,.12)" : "rgba(239,68,68,.12)", color: h === "ok" ? "#A78BFA" : h === "low" ? "#FBBF24" : "#FCA5A5" }),
+  logBadge: (bg: string, text: string): React.CSSProperties => ({ padding: "4px 8px", borderRadius: "6px", fontSize: "10px", fontWeight: 700, background: bg, color: text, width: "95px", display:"inline-block", textAlign:"center", flexShrink:0 })
 };
