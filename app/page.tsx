@@ -10,14 +10,6 @@ interface Item {
   price: number; // harga barang (dalam nilai penuh, misal 1000)
 }
 
-interface LogActivity {
-  id: string;
-  timestamp: string; // Menyimpan info Tanggal & Jam, misal "14/06/2026, 14:30"
-  itemName: string;
-  type: "tambah" | "kurang" | "edit" | "tambah_baru";
-  amount: number | string;
-}
-
 type Toast = { id: number; msg: string; ok: boolean };
 
 // Semua data awal distandarkan dengan nilai minimal stok = 15
@@ -46,7 +38,7 @@ const SEED: Omit<Item, "id">[] = [
   { name: "Led cob 9 mata blue ice", stock: 16, min: 15, price: 15000 },
   { name: "Led cob 9 mata pink",   stock: 13, min: 15, price: 15000 },
   { name: "Led cob 9 mata biru",   stock: 10, min: 15, price: 15000 },
-  { name: "Led cob 9 mata hijau",  stock: 8,  min: 15, price: 15000 },
+  { name: "Led cob 9 mata hijau",  stroke: 8, min: 15, price: 15000 } as any,
   { name: "Stepdown 5A",           stock: 17, min: 15, price: 10000 },
 ];
 
@@ -80,7 +72,6 @@ const formatRupiah = (num: number) => {
 
 export default function StockPage() {
   const [items, setItems]     = useState<Item[]>([]);
-  const [logs, setLogs]       = useState<LogActivity[]>([]);
   const [ready, setReady]     = useState(false);
   const [toasts, setToasts]   = useState<Toast[]>([]);
   
@@ -105,19 +96,14 @@ export default function StockPage() {
   const [chartView, setChartView] = useState<"all" | "low">("all");
   const toastCounter = useRef(0);
 
-  // Ambil Data dari LocalStorage saat load pertama
   useEffect(() => {
     try {
-      const savedItems = localStorage.getItem("inv-items-v4");
-      if (savedItems) {
-        setItems(JSON.parse(savedItems));
+      const saved = localStorage.getItem("inv-items-v4");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setItems(parsed);
       } else {
         setItems(SEED.map(s => ({ ...s, id: uid() })));
-      }
-
-      const savedLogs = localStorage.getItem("inv-logs-v4");
-      if (savedLogs) {
-        setLogs(JSON.parse(savedLogs));
       }
     } catch {
       setItems(SEED.map(s => ({ ...s, id: uid() })));
@@ -125,13 +111,9 @@ export default function StockPage() {
     setReady(true);
   }, []);
 
-  // Simpan Data Otomatis jika ada perubahan
   useEffect(() => {
-    if (ready) {
-      localStorage.setItem("inv-items-v4", JSON.stringify(items));
-      localStorage.setItem("inv-logs-v4", JSON.stringify(logs));
-    }
-  }, [items, logs, ready]);
+    if (ready) localStorage.setItem("inv-items-v4", JSON.stringify(items));
+  }, [items, ready]);
 
   useEffect(() => {
     if (selectedChartItem) {
@@ -147,68 +129,30 @@ export default function StockPage() {
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 2800);
   }
 
-  // Fungsi Pembantu Pencatat Log Otomatis Menggunakan FORMAT TANGGAL
-  function logActivity(itemName: string, type: "tambah" | "kurang" | "edit" | "tambah_baru", amount: number | string) {
-    const sekarang = new Date();
-    
-    // Format tanggal Indonesia: DD/MM/YYYY, HH:MM
-    const tanggalJam = sekarang.toLocaleString("id-ID", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    }).replace(/\./g, ':'); // Menyelaraskan tanda pemisah jam titik menjadi titik dua
-
-    const newLog: LogActivity = {
-      id: uid(),
-      timestamp: tanggalJam,
-      itemName,
-      type,
-      amount
-    };
-
-    setLogs(prev => [newLog, ...prev].slice(0, 50)); // Simpan maks 50 log terakhir
-  }
-
-  // Perbaikan logika tombol +, dipisah dari siklus perulangan state agar tidak terpicu dua kali
   function increment(id: string) {
-    const targetItem = items.find(it => it.id === id);
-    if (!targetItem) return;
-
-    logActivity(targetItem.name, "tambah", 1);
-    setItems(prev => prev.map(it => it.id === id ? { ...it, stock: it.stock + 1 } : it));
+    setItems(prev => prev.map(it =>
+      it.id === id ? { ...it, stock: it.stock + 1 } : it
+    ));
   }
 
-  // Perbaikan logika tombol -, dipisah dari siklus perulangan state agar tidak terpicu dua kali
   function decrement(id: string) {
-    const targetItem = items.find(it => it.id === id);
-    if (!targetItem) return;
-    if (targetItem.stock <= 0) { toast(`Stok ${targetItem.name} sudah 0`, false); return; }
-
-    logActivity(targetItem.name, "kurang", 1);
-    setItems(prev => prev.map(it => it.id === id ? { ...it, stock: it.stock - 1 } : it));
+    setItems(prev => prev.map(it => {
+      if (it.id !== id) return it;
+      if (it.stock <= 0) { toast(`Stok ${it.name} sudah 0`, false); return it; }
+      return { ...it, stock: it.stock - 1 };
+    }));
   }
 
   function editStock(id: string, val: string) {
     const n = parseInt(val);
     if (isNaN(n) || n < 0) return;
-    
-    const targetItem = items.find(it => it.id === id);
-    if (!targetItem) return;
-
-    const selisih = n - targetItem.stock;
-    if (selisih === 0) return;
-
-    if (selisih > 0) logActivity(targetItem.name, "tambah", selisih);
-    else logActivity(targetItem.name, "kurang", Math.abs(selisih));
-
-    setItems(prev => prev.map(it => it.id === id ? { ...it, stock: n } : it));
+    setItems(prev => prev.map(it =>
+      it.id === id ? { ...it, stock: n } : it
+    ));
   }
 
   function removeItem(id: string, name: string) {
     if (!confirm(`Hapus "${name}" dari stok?`)) return;
-    logActivity(name, "kurang", "Dihapus dari sistem");
     setItems(prev => prev.filter(it => it.id !== id));
     toast(`"${name}" dihapus`);
   }
@@ -228,7 +172,6 @@ export default function StockPage() {
     const mn = parseInt(editMin);
     const prc = parseInt(editPrice) * 1000;
 
-    logActivity(nm, "edit", "Spesifikasi diperbarui");
     setItems(prev => prev.map(it =>
       it.id === editingItem.id ? { 
         ...it, 
@@ -258,8 +201,6 @@ export default function StockPage() {
       min: isNaN(mn) ? 15 : mn,
       price: isNaN(prc) || prc < 0 ? 0 : prc
     };
-    
-    logActivity(nm, "tambah_baru", stk); // <--- Sekarang sukses mencatat produk baru ke dalam tabel log
     setItems(prev => [...prev, newItem]);
     toast(`"${nm}" ditambahkan`);
     setShowModal(false);
@@ -289,7 +230,7 @@ export default function StockPage() {
       <div style={{ display:"flex", alignItems:"center", justifyContent:"center",
         height:"100vh", background:"#0a0a12", flexDirection:"column", gap:16 }}>
         <div style={{ width:36, height:36, border:"3px solid #2D1F5E",
-          borderTopColor:"#8B5CF6", borderRadius:"50%", animationName:"spin", animationDuration:"0.7s", animationTimingFunction:"linear", animationIterationCount:"infinite" }} />
+          borderTopColor:"#8B5CF6", borderRadius:"50%", animation:"spin 0.7s linear infinite" }} />
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         <span style={{ color:"#7C3AED", fontFamily:"Inter,sans-serif", fontSize:14 }}>Memuat...</span>
       </div>
@@ -298,9 +239,9 @@ export default function StockPage() {
 
   return (
     <div style={S.root}>
-      {/* ── Global CSS & Impor Font Khusus Premium Racing ── */}
+      {/* ── Global CSS ── */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@800;900&family=Syne:wght@800&family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800;900&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
         html { scroll-behavior: smooth; }
         body { background:#0a0a12; overflow-x:hidden; }
@@ -314,7 +255,7 @@ export default function StockPage() {
         @keyframes slideIn { from{opacity:0;transform:translateX(60px)} to{opacity:1;transform:translateX(0)} }
         @keyframes pulse2  { 0%,100%{opacity:1} 50%{opacity:.55} }
 
-        .card  { animation-name: fadeUp; animation-duration: .4s; animation-timing-function: ease; animation-fill-mode: both; }
+        .card  { animation: fadeUp .4s ease both; }
         .row   { transition: background .15s; }
         .row:hover { background: rgba(139,92,246,.07) !important; }
 
@@ -330,7 +271,7 @@ export default function StockPage() {
           background:rgba(0,0,0,.75);
           backdrop-filter: blur(8px);
           display:flex; align-items:center; justify-content:center; padding:16px;
-          animation-name: fadeUp; animation-duration: .2s; animation-timing-function: ease;
+          animation: fadeUp .2s ease;
         }
         .modal-box {
           background:#13132a;
@@ -347,50 +288,53 @@ export default function StockPage() {
           box-shadow:0 0 0 3px rgba(124,58,237,.18); }
         .inp::placeholder { color:#3d3d6b; }
 
-        .toast-item { animation-name: slideIn; animation-duration: .3s; animation-timing-function: ease; }
+        .toast-item { animation: slideIn .3s ease; }
         .chip-active { background:#7C3AED !important; color:#fff !important; }
         .chip { transition: background .2s, color .2s; }
 
         .stock-inp:focus { outline:none; border-color:#7C3AED !important; }
         .stock-inp { text-align:center; }
-        .badge-critical { animation-name: pulse2; animation-duration: 1.8s; animation-iteration-count: infinite; }
+        .badge-critical { animation: pulse2 1.8s infinite; }
 
+        /* Responsif Sempurna di HP */
         @media (max-width:768px) {
           .hide-md { display:none !important; }
           .chart-label { font-size:11px !important; max-width:90px !important; width:90px !important; }
           .row { padding: 14px 12px !important; gap: 8px !important; }
-          .logo-img { height: 46px !important; width: 46px !important; }
-          .text-lingga { font-size: 22px !important; }
-          .text-autolamp { font-size: 9px !important; letter-spacing: 4px !important; }
-          .brand-wrapper { gap: 10px !important; }
+          .logo-img { height: 42px !important; }
+          .logo-text { font-size: 14px !important; letter-spacing: 0.05em !important; }
+          .brand-container { gap: 6px !important; }
         }
         @media (max-width:640px) {
           .hide-sm { display:none !important; }
           .table-scrollable { overflow-x: auto; WebkitOverflowScrolling: touch; }
-          .search-input-box { width: 110px !important; }
+          .search-input-box { width: 100px !important; }
         }
       `}</style>
 
       {/* ════════════════════════════════════
-          HEADER (BRANDING MOTORSPORT PREMIUM)
+          HEADER (RESPONSIF HP SEMPURNA)
       ════════════════════════════════════ */}
       <header style={S.header}>
         <div style={S.headerInner}>
-          
-          <div className="brand-wrapper" style={S.brandWrapper}>
-            <img 
-              className="logo-img"
-              src="/logo-removebg.png" 
-              alt="Logo" 
-              style={{ height: "64px", width: "64px", objectFit: "contain", flexShrink: 0 }} 
-            />
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", lineHeight: 1 }}>
-              <span className="text-lingga" style={S.textLingga}>LINGGA</span>
-              <span className="text-autolamp" style={S.textAutolamp}>AUTOLAMP</span>
+          {/* Pojok Kiri: Logo & Teks */}
+          <div className="brand-container" style={S.brandContainer}>
+            <div style={S.logoWrap}>
+              <img 
+                className="logo-img"
+                src="/logo-removebg.png" 
+                alt="Lingga Autolamp Logo" 
+                style={{ height: "60px", width: "auto", objectFit: "contain" }} 
+              />
+            </div>
+            <div style={S.textWrap}>
+              <span className="logo-text" style={S.logoTextPrimary}>LINGGA</span>
+              <span className="logo-text" style={S.logoTextSecondary}>AUTOLAMP</span>
             </div>
           </div>
 
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          {/* Kanan: Pencarian + Tombol Tambah */}
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <div style={S.searchWrap}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink:0, color:"#5B5B8A" }}>
                 <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
@@ -474,7 +418,7 @@ export default function StockPage() {
           />
         </div>
 
-        {/* ── Chart Grafis ── */}
+        {/* ── Chart Visual Grafis ── */}
         <section className="card" style={{ ...S.card, animationDelay:"180ms" }}>
           <div style={S.cardHead}>
             <div>
@@ -512,14 +456,8 @@ export default function StockPage() {
                   <div key={it.id} 
                     className="bar-container"
                     onClick={() => setSelectedChartItem(it)}
-                    style={{ 
-                      display:"flex", alignItems:"center", gap:12,
-                      animationName: "fadeUp", 
-                      animationDuration: ".35s", 
-                      animationTimingFunction: "ease", 
-                      animationFillMode: "both",
-                      animationDelay: `${idx * 12}ms` 
-                    }}>
+                    style={{ display:"flex", alignItems:"center", gap:12,
+                    animation:`fadeUp .35s ease both`, animationDelay:`${idx * 12}ms` }}>
 
                     <div
                       className="chart-label"
@@ -586,7 +524,7 @@ export default function StockPage() {
           )}
         </section>
 
-        {/* ── Tabel Manajemen Stok Utama ── */}
+        {/* ── Tabel Utama / Management Stok ── */}
         <section className="card" style={{ ...S.card, padding:0, overflow:"hidden", animationDelay:"240ms" }}>
           <div style={{ ...S.cardHead, padding:"24px 24px 16px" }}>
             <div>
@@ -610,9 +548,9 @@ export default function StockPage() {
 
               <div style={{ maxHeight:550, overflowY:"auto" }}>
                 {filtered.length === 0 ? (
-                  <div style={{ textAlign:"center", padding:"50px 20px", color:"#4A4A7A", fontSize:14 }}>
-                    {search ? `Kata kunci "${search}" tidak ditemukan.` : "Daftar inventory Anda kosong."}
-                  </div>
+                    <div style={{ textAlign:"center", padding:"50px 20px", color:"#4A4A7A", fontSize:14 }}>
+                      {search ? `Kata kunci "${search}" tidak ditemukan.` : "Daftar inventory Anda kosong."}
+                    </div>
                 ) : (
                   filtered.map((it, idx) => {
                     const h = stockHealth(it.stock, it.min);
@@ -623,11 +561,7 @@ export default function StockPage() {
                         style={{
                           ...S.tableRow,
                           borderLeft:`4px solid ${HEALTH_COLOR[h]}`,
-                          animationName: "fadeUp",
-                          animationDuration: ".4s",
-                          animationTimingFunction: "ease",
-                          animationFillMode: "both",
-                          animationDelay: `${idx * 12}ms`
+                          animationDelay:`${idx * 12}ms`,
                         }}
                       >
                         <div style={S.colName}>
@@ -697,85 +631,10 @@ export default function StockPage() {
             </div>
           </div>
         </section>
-
-        {/* ── KARTU RIWAYAT ARUS STOK (SEKARANG FORMAT TANGGAL & TIDAK DUPLIKAT) ── */}
-        <section className="card" style={{ ...S.card, animationDelay: "300ms" }}>
-          <div style={S.cardHead}>
-            <div>
-              <div style={S.cardTitle}>⏱ Riwayat Arus Stok Barang</div>
-              <div style={S.cardSub}>Log mutasi masuk/keluar otomatis berdasarkan kalender kerja harian</div>
-            </div>
-            {logs.length > 0 && (
-              <button 
-                onClick={() => { if(confirm("Hapus semua riwayat catatan?")) setLogs([]); }}
-                style={{ background: "transparent", border: "none", color: "#EF4444", fontSize: 12, cursor: "pointer", fontWeight: 500 }}
-              >
-                Clear Log
-              </button>
-            )}
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 260, overflowY: "auto", paddingRight: 4 }}>
-            {logs.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "30px 10px", color: "#4A4A7A", fontSize: 13, border: "1px dashed rgba(139,92,246,0.15)", borderRadius: 12 }}>
-                Belum ada aktivitas sirkulasi stok. Riwayat otomatis tercatat di sini saat Anda mengubah stok atau menambah barang.
-              </div>
-            ) : (
-              logs.map(log => {
-                let badgeColor = "#8B5CF6";
-                let badgeBg = "rgba(139,92,246,0.1)";
-                let displayText = log.amount;
-
-                if (log.type === "tambah") {
-                  badgeColor = "#22C55E";
-                  badgeBg = "rgba(34,197,94,0.12)";
-                  displayText = `+${log.amount} Pcs`;
-                } else if (log.type === "kurang") {
-                  badgeColor = "#EF4444";
-                  badgeBg = "rgba(239,68,68,0.12)";
-                  displayText = `-${log.amount} Pcs`;
-                } else if (log.type === "tambah_baru") {
-                  badgeColor = "#FBBF24";
-                  badgeBg = "rgba(251,191,36,0.12)";
-                  displayText = `Produk Baru (+${log.amount})`;
-                }
-
-                return (
-                  <div key={log.id} style={{
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                    background: "rgba(255,255,255,0.01)", padding: "12px 16px", borderRadius: 12,
-                    border: "1px solid rgba(139,92,246,0.06)", gap: 12
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-                      <span style={{ 
-                        fontSize: 11, color: "#A78BFA", background: "rgba(139,92,246,0.1)", 
-                        padding: "4px 8px", borderRadius: 6, fontWeight: 600, flexShrink: 0,
-                        fontVariantNumeric: "tabular-nums"
-                      }}>
-                        {log.timestamp}
-                      </span>
-                      <span style={{ fontSize: 14, fontWeight: 500, color: "#E9E3FF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace:"nowrap" }}>
-                        {log.itemName}
-                      </span>
-                    </div>
-
-                    <span style={{
-                      fontSize: 13, fontWeight: 700, padding: "3px 10px", borderRadius: 8,
-                      color: badgeColor, background: badgeBg, flexShrink: 0
-                    }}>
-                      {displayText}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </section>
-
       </main>
 
       <footer style={{ textAlign:"center", padding:"40px 24px", color:"#4A4A7A", fontSize:12 }}>
-        © 2026 LINGGA AUTOLAMP · Sistem Dashboard Manajemen Terintegrasi Penuh
+        © 2026 LINGGA AUTOLAMP · Sistem Dashboard Manajemen Terintegrasi
       </footer>
 
       {/* ════════════════════════════════════
@@ -990,40 +849,46 @@ const S = {
     borderBottom:"1px solid rgba(139,92,246,.2)",
   },
   headerInner: {
-    maxWidth: "100%", 
+    maxWidth: "1100px", 
     margin:"0 auto",
     padding:"12px 24px", 
     display:"flex", alignItems:"center",
     justifyContent:"space-between", gap:12,
   } as React.CSSProperties,
 
-  brandWrapper: {
+  brandContainer: {
     display: "flex",
     alignItems: "center",
-    gap: "14px",
+    gap: "10px",
   } as React.CSSProperties,
-
-  textLingga: {
-    fontFamily: "'Syne', 'Outfit', sans-serif",
-    fontSize: "30px",
-    fontWeight: 800,
-    color: "#FFFFFF",
-    letterSpacing: "-0.01em",
-    textTransform: "uppercase",
-    transform: "skewX(-10deg)",
-    display: "inline-block",
+  logoWrap: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    background: "transparent",
   } as React.CSSProperties,
-
-  textAutolamp: {
-    fontFamily: "'Orbitron', sans-serif",
-    fontSize: "11px",
+  textWrap: {
+    display: "flex",
+    flexDirection: "column" as const,
+    justifyContent: "center",
+    lineHeight: 1.1,
+  } as React.CSSProperties,
+  logoTextPrimary: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: "20px",
     fontWeight: 900,
-    color: "#FBBF24",
-    letterSpacing: "6.5px",
-    marginTop: "5px",
-    textTransform: "uppercase",
-    transform: "skewX(-10deg)",
-    display: "inline-block",
+    color: "#FFFFFF",
+    letterSpacing: "0.08em",
+    textShadow: "0 0 12px rgba(255,255,255,0.2)",
+  } as React.CSSProperties,
+  logoTextSecondary: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: "20px",
+    fontWeight: 900,
+    color: "#FBBF24", // Yellow accent
+    letterSpacing: "0.08em",
+    textShadow: "0 0 15px rgba(251,191,36,0.4)",
   } as React.CSSProperties,
 
   searchWrap: {
@@ -1049,7 +914,7 @@ const S = {
   } as React.CSSProperties,
 
   main: {
-    maxWidth: "100%", 
+    maxWidth: "1100px", 
     margin:"0 auto",
     padding:"24px 24px 16px",
     display:"flex", flexDirection:"column" as const, gap:24,
@@ -1120,7 +985,7 @@ const S = {
     background:"rgba(139,92,246,.06)",
     border:"1px solid rgba(139,92,246,.25)",
     color:"#fff", fontSize:14, fontWeight:700,
-    fontFamily:"Inter,sans-serif", textAnlign:"center" as const,
+    fontFamily:"Inter,sans-serif", textAlign:"center" as const,
     fontVariantNumeric:"tabular-nums" as const,
   } as React.CSSProperties,
 
@@ -1196,10 +1061,7 @@ function StatCard({
         borderRadius:16,
         padding:"20px",
         display:"flex", alignItems:"center", gap:14,
-        animationName: "fadeUp",
-        animationDuration: ".4s",
-        animationTimingFunction: "ease",
-        animationFillMode: "both",
+        animation:`fadeUp .4s ease both`,
         animationDelay:`${delay}ms`,
         minWidth:0,
       }}
