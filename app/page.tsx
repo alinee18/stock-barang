@@ -89,7 +89,6 @@ export default function StockPage() {
   const [chartView, setChartView] = useState<"all" | "low">("all");
   const toastCounter = useRef(0);
 
-  // Load awal dari localStorage
   useEffect(() => {
     try {
       const savedItems = localStorage.getItem("inv-items-v5");
@@ -102,7 +101,6 @@ export default function StockPage() {
     setReady(true);
   }, []);
 
-  // Sinkronisasi otomatis ke localStorage
   useEffect(() => {
     if (ready) {
       localStorage.setItem("inv-items-v5", JSON.stringify(items));
@@ -315,7 +313,6 @@ export default function StockPage() {
 
         .stock-inp:focus { outline:none; border-color:#7C3AED !important; }
 
-        /* Handle Responsif Grid Atas */
         .stats-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
@@ -366,10 +363,10 @@ export default function StockPage() {
         </div>
       </header>
 
-      {/* ── LAYOUT DAN STRUKTUR VERTIKAL KE BAWAH (DIPERLEBAR) ── */}
+      {/* ── MAIN LAYOUT (URUTAN SUDAH BENAR & DIPERLEBAR) ── */}
       <main style={S.main}>
 
-        {/* Bagian 1: Kumpulan Kotak Statistik */}
+        {/* 1. Kumpulan Kotak Statistik */}
         <div className="stats-grid">
           <StatCard label="Jenis Barang" value={totalTypes.toLocaleString("id-ID")} sub="item terdaftar" accent="#8B5CF6" />
           <StatCard label="Total Stok" value={totalStock.toLocaleString("id-ID")} sub="unit tersedia" accent="#A78BFA" />
@@ -377,7 +374,45 @@ export default function StockPage() {
           <StatCard label="Nilai Inventory" value={formatRupiah(totalValue)} sub="total nilai modal" accent="#10B981" />
         </div>
 
-        {/* Bagian 2: Tabel Utama Manajemen Stok */}
+        {/* 2. Grafik Batas Stok (DIAGRAM DULUAN DI SINI) */}
+        <section className="card" style={S.card}>
+          <div style={{ ...S.cardHead, marginBottom: 20 }}>
+            <div>
+              <div style={S.cardTitle}>Grafik Batas Stok</div>
+              <div style={S.cardSub}>Semua {totalTypes} item · Klik grafik untuk info lengkap</div>
+            </div>
+            <div style={{ display:"flex", gap:6 }}>
+              {(["all","low"] as const).map(v => (
+                <button
+                  key={v}
+                  className={`chip ${chartView === v ? "chip-active" : ""}`}
+                  style={SF.chip(chartView === v)}
+                  onClick={() => setChartView(v)}
+                >
+                  {v === "all" ? "Tampilkan Semua" : "⚠ Stok Rendah"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+            {chartItems.map((it) => {
+              const pct   = maxStock > 0 ? (it.stock / maxStock) * 100 : 0;
+              const h     = stockHealth(it.stock, it.min);
+              return (
+                <div key={it.id} className="bar-container" onClick={() => setSelectedChartItem(it)} style={{ display:"flex", alignItems:"center", gap:16 }}>
+                  <div className="chart-label" style={{ width:160, minWidth:110, flexShrink:0, fontSize:13, color:"#8B8BAD", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", textAlign:"right" }}>{it.name}</div>
+                  <div style={{ flex:1, height:24, background:"rgba(255,255,255,.02)", borderRadius:6, overflow:"hidden", position:"relative" }}>
+                    <div className="bar-fill" style={{ height:"100%", width:`${pct}%`, background:`linear-gradient(90deg, ${HEALTH_COLOR[h]}CC, ${HEALTH_COLOR[h]})`, borderRadius:6, boxShadow:`0 0 12px ${HEALTH_GLOW[h]}` }} />
+                  </div>
+                  <div style={{ width:45, textAlign:"right", flexShrink:0, fontSize:13, fontWeight:700, color: HEALTH_COLOR[h] }}>{it.stock}</div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 3. Tabel Utama Manajemen Stok (BARU LIST BARANG DI SINI) */}
         <section className="card" style={{ ...S.card, padding:0, overflow:"hidden" }}>
           <div style={{ padding:"22px 24px 14px" }}>
             <div style={S.cardTitle}>Manajemen Stok Utama Toko</div>
@@ -418,45 +453,7 @@ export default function StockPage() {
           </div>
         </section>
 
-        {/* Bagian 3: Grafik Batas Stok */}
-        <section className="card" style={S.card}>
-          <div style={{ ...S.cardHead, marginBottom: 20 }}>
-            <div>
-              <div style={S.cardTitle}>Grafik Batas Stok</div>
-              <div style={S.cardSub}>Semua {totalTypes} item · Klik grafik untuk info lengkap</div>
-            </div>
-            <div style={{ display:"flex", gap:6 }}>
-              {(["all","low"] as const).map(v => (
-                <button
-                  key={v}
-                  className={`chip ${chartView === v ? "chip-active" : ""}`}
-                  style={SF.chip(chartView === v)}
-                  onClick={() => setChartView(v)}
-                >
-                  {v === "all" ? "Tampilkan Semua" : "⚠ Stok Rendah"}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-            {chartItems.map((it) => {
-              const pct   = maxStock > 0 ? (it.stock / maxStock) * 100 : 0;
-              const h     = stockHealth(it.stock, it.min);
-              return (
-                <div key={it.id} className="bar-container" onClick={() => setSelectedChartItem(it)} style={{ display:"flex", alignItems:"center", gap:16 }}>
-                  <div className="chart-label" style={{ width:160, minWidth:110, flexShrink:0, fontSize:13, color:"#8B8BAD", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", textAlign:"right" }}>{it.name}</div>
-                  <div style={{ flex:1, height:24, background:"rgba(255,255,255,.02)", borderRadius:6, overflow:"hidden", position:"relative" }}>
-                    <div className="bar-fill" style={{ height:"100%", width:`${pct}%`, background:`linear-gradient(90deg, ${HEALTH_COLOR[h]}CC, ${HEALTH_COLOR[h]})`, borderRadius:6, boxShadow:`0 0 12px ${HEALTH_GLOW[h]}` }} />
-                  </div>
-                  <div style={{ width:45, textAlign:"right", flexShrink:0, fontSize:13, fontWeight:700, color: HEALTH_COLOR[h] }}>{it.stock}</div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Bagian 4: Riwayat Aktivitas Log Toko */}
+        {/* 4. Riwayat Aktivitas Log Toko */}
         <section className="card" style={S.card}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
             <div>
@@ -572,7 +569,6 @@ function StatCard({ label, value, sub, accent }: { label: string; value: string 
   );
 }
 
-// ── KELOMPOK 1: Objek Properti Style CSS Murni murni (Lebas dari Error TypeScript) ──
 const S: Record<string, React.CSSProperties> = {
   root: { minHeight:"100vh", background:"#0a0a12", fontFamily:"'Inter', sans-serif", color:"#E9E3FF" },
   header: { background:"rgba(13,13,26,.96)", borderBottom:"1px solid rgba(139,92,246,.2)", position:"sticky", top:0, zIndex:100 },
@@ -606,7 +602,6 @@ const S: Record<string, React.CSSProperties> = {
   footer: { textAlign:"center", padding:"24px 0 10px", color:"#4A4A7A", fontSize:12 }
 };
 
-// ── KELOMPOK 2: Fungsi Pembuat Style Dinamis Berparameter (Return React.CSSProperties) ──
 const SF = {
   chip: (active: boolean): React.CSSProperties => ({ padding:"5px 12px", borderRadius:6, fontSize:12, cursor:"pointer", background: active ? "#7C3AED" : "transparent", color: active ? "#fff" : "#8B8BAD", border:"1px solid rgba(139,92,246,.2)", transition:"all 0.15s" }),
   btnQty: (color: string, bg: string): React.CSSProperties => ({ width:30, height:30, borderRadius:8, background:bg, color:color, border:"none", fontSize:16, cursor:"pointer" }),
