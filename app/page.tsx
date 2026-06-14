@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-// ── 1. DEFINISI TIPE DATA OKE ──
+// ── 1. DEFINISI TIPE DATA ──
 interface StockItem {
   id: string;
   name: string;
@@ -20,7 +20,7 @@ interface HistoryLog {
 const uid = () => Math.random().toString(36).substring(2, 9);
 
 export default function StockPage() {
-  // Data awal sesuai layout asli kamu
+  // Data State Bawaan Asli Toko Kamu
   const [items, setItems] = useState<StockItem[]>([
     { id: "1", name: "Stepdown 5A", stock: 16, category: "Elektronik" },
     { id: "2", name: "Arduino Uno R3", stock: 25, category: "Mikrokontroler" },
@@ -40,7 +40,7 @@ export default function StockPage() {
   const [newStock, setNewStock] = useState<number>(0);
   const [newCategory, setNewCategory] = useState("Elektronik");
 
-  // Fungsi Logika Tambah Log Dinamis
+  // ── 2. LOGIKA UPDATE STRUKTUR LOG WARNA ──
   const addLog = (action: string, type: HistoryLog["type"]) => {
     const hariIni = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
     const jamIni = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -76,24 +76,24 @@ export default function StockPage() {
     if (!newName.trim()) return;
     const newItem: StockItem = { id: uid(), name: newName, stock: newStock, category: newCategory };
     setItems(prev => [...prev, newItem]);
-    addLog(`Tambah barang baru: ${newName} dengan stok awal ${newStock}`, "add");
+    addLog(`Tambah barang baru: "${newName}" dengan stok awal ${newStock}`, "add");
     setNewName("");
     setNewStock(0);
   };
 
   const handleRemoveItem = (id: string, name: string) => {
     setItems(prev => prev.filter(it => it.id !== id));
-    addLog(`Hapus barang: ${name} telah dihapus dari daftar`, "remove");
+    addLog(`Hapus barang: "${name}" telah dihapus dari daftar`, "remove");
   };
 
   return (
     <div style={styles.wrapper}>
-      {/* CSS internal injection khusus untuk menangani responsivitas HP secara interaktif */}
+      {/* CSS Injection: Menangani responsivitas HP secara interaktif tanpa ngerusak kode inline asli */}
       <style>{`
-        @media (max-width: 768px) {
-          .main-grid { flex-direction: column !important; }
+        @media (max-width: 900px) {
+          .main-layout { flex-direction: column !important; }
           .form-row { flex-direction: column !important; }
-          .table-responsive { overflow-x: auto !important; }
+          .table-container { overflow-x: auto !important; }
         }
       `}</style>
 
@@ -103,10 +103,10 @@ export default function StockPage() {
           <p style={styles.subTitle}>Kelola inventaris toko dengan sistem log real-time otomatis.</p>
         </header>
 
-        {/* ── LAYOUT UTAMA (Tetap Baris Kiri-Kanan Sesuai Image Asli) ── */}
-        <div className="main-grid" style={{ display: "flex", gap: "24px", marginBottom: "24px" }}>
+        {/* ── LAYOUT UTAMA (Horizontal Kiri-Kanan Tetap Seperti Semula) ── */}
+        <div className="main-layout" style={{ display: "flex", gap: "24px", marginBottom: "24px" }}>
           
-          {/* KIRI: TAMBAH PRODUK BARU */}
+          {/* KRI: TAMBAH PRODUK BARU */}
           <section style={{ ...styles.card, flex: 1 }}>
             <h2 style={styles.cardTitle}>Tambah Produk Baru</h2>
             <form onSubmit={handleAddItem} style={styles.form}>
@@ -154,7 +154,7 @@ export default function StockPage() {
           {/* KANAN: DAFTAR STOK PRODUK */}
           <section style={{ ...styles.card, flex: 1.2 }}>
             <h2 style={styles.cardTitle}>Daftar Stok Produk</h2>
-            <div className="table-responsive" style={{ width: "100%" }}>
+            <div className="table-container" style={{ width: "100%" }}>
               <table style={styles.table}>
                 <thead>
                   <tr>
@@ -189,7 +189,7 @@ export default function StockPage() {
           </section>
         </div>
 
-        {/* ── BAWAH: RIWAYAT AKTIVITAS LOG TOKO (YANG DIGANTI WARNANYA) ── */}
+        {/* ── BAWAH: RIWAYAT AKTIVITAS LOG TOKO (WARNA EDITAN REQ & RESPONSIF) ── */}
         <section style={styles.card}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
             <div>
@@ -203,22 +203,22 @@ export default function StockPage() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {logs.map((log) => {
-              // Pengkondisian warna murni sesuai request user
+              // Pewarnaan dinamis murni berdasarkan tipe aktivitas
               let badgeLabel = "LOG";
-              let themeColor = "#EF4444"; // Default merah
+              let themeColor = "#EF4444"; 
 
               if (log.type === "stok_masuk" || log.type === "add") {
                 badgeLabel = log.type === "add" ? "ADD BARANG" : "STOK MASUK";
-                themeColor = "#22C55E"; // Hijau kalau masuk atau add barang baru
+                themeColor = "#22C55E"; // Ijo/Hijau klo masuk atau add barang baru
               } else if (log.type === "stok_keluar") {
                 badgeLabel = "STOK KELUAR";
-                themeColor = "#EF4444"; // Merah kalau keluar
+                themeColor = "#EF4444"; // Merah klo keluar
               } else if (log.type === "remove") {
                 badgeLabel = "HAPUS BARANG";
-                themeColor = "#EF4444"; // Merah kalau hapus
+                themeColor = "#EF4444"; // Merah klo hapus
               } else if (log.type === "update") {
                 badgeLabel = "EDIT INFO";
-                themeColor = "#FBBF24"; // Kuning kalau edit info
+                themeColor = "#FBBF24"; // Kuning klo edit info
               }
 
               return (
@@ -228,13 +228,13 @@ export default function StockPage() {
                     padding: "16px",
                     backgroundColor: "rgba(255, 255, 255, 0.02)",
                     borderRadius: "12px",
-                    borderLeft: `4px solid ${themeColor}`, // Border kiri berwarna dinamis
+                    borderLeft: `4px solid ${themeColor}`, // Garis indikator dinamis
                     display: "flex",
                     flexDirection: "column",
                     gap: "8px",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                     <span
                       style={{
                         fontSize: "10px",
@@ -242,7 +242,7 @@ export default function StockPage() {
                         padding: "3px 8px",
                         borderRadius: "4px",
                         backgroundColor: `${themeColor}20`,
-                        color: themeColor, // Warna teks label dinamis
+                        color: themeColor,
                       }}
                     >
                       {badgeLabel}
@@ -260,7 +260,7 @@ export default function StockPage() {
   );
 }
 
-// ── CSS IN JS (STYLING ASLI DARI IMAGE_48A843.PNG) ──
+// ── CSS IN JS (TAMPILAN ASLI KAMU DARI IMAGE_48A843.PNG) ──
 const styles = {
   wrapper: {
     backgroundColor: "#0A0A16",
@@ -296,7 +296,7 @@ const styles = {
   cardTitle: {
     fontSize: "18px",
     fontWeight: "bold",
-    margin: "0 0 16px 0",
+    margin: "0 0 4px 0",
   },
   cardSub: {
     fontSize: "13px",
@@ -307,6 +307,7 @@ const styles = {
     display: "flex",
     flexDirection: "column" as const,
     gap: "16px",
+    marginTop: "16px",
   },
   formGroup: {
     display: "flex",
