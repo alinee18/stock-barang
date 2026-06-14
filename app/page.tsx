@@ -266,31 +266,33 @@ export default function StockPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
-        html, body { background:#0a0a12; min-height: 100vh; }
+        html, body { background:#0a0a12; min-height: 100vh; -webkit-font-smoothing: antialiased; }
 
+        /* Scrollbar custom */
         ::-webkit-scrollbar { width:6px; height:6px; }
         ::-webkit-scrollbar-track { background:transparent; }
         ::-webkit-scrollbar-thumb { background:#3B1F8C; border-radius:99px; }
 
-        @keyframes spin    { to { transform:rotate(360deg) } }
         @keyframes fadeUp  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
         @keyframes slideIn { from{opacity:0;transform:translateX(60px)} to{opacity:1;transform:translateX(0)} }
 
         .card  { animation: fadeUp .4s ease both; margin-bottom: 24px; }
-        .row   { transition: background .15s; }
-        .row:hover { background: rgba(139,92,246,.07) !important; }
-
+        
+        /* Bar chart animation & sizing */
         .bar-fill { transition: width .5s cubic-bezier(.4,0,.2,1); }
         .bar-container { cursor: pointer; transition: transform 0.2s; }
         .bar-container:hover { transform: scaleX(1.002); }
 
+        /* Button click feedback */
         .btn-qty { transition: background .15s, transform .1s; -webkit-tap-highlight-color: transparent; }
-        .btn-qty:active { transform: scale(.85); }
+        .btn-qty:active { transform: scale(.88); }
+        .btn-action-mobile:active { transform: scale(.9); background: rgba(255,255,255,0.1); }
 
+        /* Modal styling */
         .modal-overlay {
           position:fixed; inset:0; z-index:200;
-          background:rgba(0,0,0,.75);
-          backdrop-filter: blur(8px);
+          background:rgba(0,0,0,.8);
+          backdrop-filter: blur(10px);
           display:flex; align-items:center; justify-content:center; padding:16px;
           animation: fadeUp .2s ease;
         }
@@ -306,13 +308,11 @@ export default function StockPage() {
         }
 
         .inp:focus { outline:none; border-color:#7C3AED !important; box-shadow:0 0 0 3px rgba(124,58,237,.18); }
-        .inp::placeholder { color:#3d3d6b; }
-
+        .inp::placeholder { color:#4E4E7A; }
         .toast-item { animation: slideIn .3s ease; }
         .chip-active { background:#7C3AED !important; color:#fff !important; }
 
-        .stock-inp:focus { outline:none; border-color:#7C3AED !important; }
-
+        /* Grid statistik responsive */
         .stats-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
@@ -320,68 +320,69 @@ export default function StockPage() {
           margin-bottom: 24px;
         }
 
+        /* Responsive Breakpoints */
+        .desktop-table { display: block; }
+        .mobile-list { display: none; }
+        .table-action-header { display: flex; alignItems: center; gap: 12px; margin-left: auto; }
+
         @media (max-width:1024px) {
           .stats-grid { grid-template-columns: repeat(2, 1fr); }
         }
+
         @media (max-width:768px) {
-          .chart-label { font-size:11px !important; max-width:90px !important; width:90px !important; }
-          .row { padding: 12px 14px !important; gap: 8px !important; }
+          .chart-label { font-size:11px !important; max-width:100px !important; width:100px !important; }
+          .desktop-table { display: none; }
+          .mobile-list { display: flex; flex-direction: column; gap: 12px; padding: 0 16px 16px 16px; }
+          .table-action-header { width: 100%; justify-content: space-between; margin-top: 10px; }
+          .search-input-box { flex: 1 !important; width: 100% !important; }
         }
+
         @media (max-width:640px) {
-          .stats-grid { grid-template-columns: 1fr; gap: 12px; }
-          .hide-sm { display:none !important; }
-          .table-scrollable { overflow-x: auto; WebkitOverflowScrolling: touch; }
-          .search-input-box { width: 110px !important; }
+          .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+          .header-title-box { font-size: 15px !important; }
+          .logo-img { width: 32px !important; height: 32px !important; }
         }
       `}</style>
 
-      {/* ── HEADER BRAND ── */}
+      {/* ── HEADER NAVBAR (BERSIH, LEGA, LOGO AMAN) ── */}
       <header style={S.header}>
         <div style={S.headerInner}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div style={{ fontFamily: "'Inter', sans-serif", fontWeight: 800, fontSize: "19px", letterSpacing: "0.5px" }}>
+            <img 
+              src="/logo-removebg.png" 
+              alt="Logo Lingga Autolamp" 
+              className="logo-img"
+              style={{ width: "38px", height: "38px", objectFit: "contain" }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+            <div className="header-title-box" style={{ fontFamily: "'Inter', sans-serif", fontWeight: 800, fontSize: "19px", letterSpacing: "0.5px" }}>
               <span style={{ color: "#ffffff" }}>LINGGA</span>
-              <span style={{ color: "#FBBF24", marginLeft: "6px" }}>AUTOLAMP</span>
+              <span style={{ color: "#FBBF24", marginLeft: "4px" }}>AUTOLAMP</span>
             </div>
           </div>
-
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <div style={S.searchWrap}>
-              <input
-                className="inp search-input-box"
-                style={S.searchInp}
-                placeholder="Cari barang..." 
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-            <button style={S.btnAdd} onClick={() => setShowModal(true)}>
-              <span style={{ fontSize:20, lineHeight:1, fontWeight:"bold" }}>+</span>
-              <span className="hide-sm" style={{ marginLeft: 6 }}>Tambah Barang</span>
-            </button>
-          </div>
+          <span style={{ fontSize: 11, color: "#4A4A7A", fontWeight: 500 }} className="hide-sm">v5.2 Stable Deployment</span>
         </div>
       </header>
 
-      {/* ── MAIN LAYOUT (URUTAN SUDAH BENAR & DIPERLEBAR) ── */}
+      {/* ── MAIN CONTENT ── */}
       <main style={S.main}>
 
-        {/* 1. Kumpulan Kotak Statistik */}
+        {/* 1. Kotak Statistik */}
         <div className="stats-grid">
           <StatCard label="Jenis Barang" value={totalTypes.toLocaleString("id-ID")} sub="item terdaftar" accent="#8B5CF6" />
           <StatCard label="Total Stok" value={totalStock.toLocaleString("id-ID")} sub="unit tersedia" accent="#A78BFA" />
-          <StatCard label="Stok Rendah" value={lowCount.toLocaleString("id-ID")} sub="perlu order lagi" accent={lowCount > 0 ? "#F59E0B" : "#22C55E"} />
-          <StatCard label="Nilai Inventory" value={formatRupiah(totalValue)} sub="total nilai modal" accent="#10B981" />
+          <StatCard label="Stok Rendah" value={lowCount.toLocaleString("id-ID")} sub="order lagi" accent={lowCount > 0 ? "#F59E0B" : "#22C55E"} />
+          <StatCard label="Nilai Inventory" value={formatRupiah(totalValue)} sub="total modal" accent="#10B981" />
         </div>
 
-        {/* 2. Grafik Batas Stok (DIAGRAM DULUAN DI SINI) */}
+        {/* 2. Grafik Batas Stok */}
         <section className="card" style={S.card}>
-          <div style={{ ...S.cardHead, marginBottom: 20 }}>
+          <div style={{ ...S.cardHead, marginBottom: 20, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             <div>
               <div style={S.cardTitle}>Grafik Batas Stok</div>
-              <div style={S.cardSub}>Semua {totalTypes} item · Klik grafik untuk info lengkap</div>
+              <div style={S.cardSub}>Klik bar diagram untuk detail cepat info barang</div>
             </div>
-            <div style={{ display:"flex", gap:6 }}>
+            <div style={{ display:"flex", gap:6, marginLeft: "auto" }}>
               {(["all","low"] as const).map(v => (
                 <button
                   key={v}
@@ -389,7 +390,7 @@ export default function StockPage() {
                   style={SF.chip(chartView === v)}
                   onClick={() => setChartView(v)}
                 >
-                  {v === "all" ? "Tampilkan Semua" : "⚠ Stok Rendah"}
+                  {v === "all" ? "Semua" : "⚠ Rendah"}
                 </button>
               ))}
             </div>
@@ -400,85 +401,142 @@ export default function StockPage() {
               const pct   = maxStock > 0 ? (it.stock / maxStock) * 100 : 0;
               const h     = stockHealth(it.stock, it.min);
               return (
-                <div key={it.id} className="bar-container" onClick={() => setSelectedChartItem(it)} style={{ display:"flex", alignItems:"center", gap:16 }}>
-                  <div className="chart-label" style={{ width:160, minWidth:110, flexShrink:0, fontSize:13, color:"#8B8BAD", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", textAlign:"right" }}>{it.name}</div>
-                  <div style={{ flex:1, height:24, background:"rgba(255,255,255,.02)", borderRadius:6, overflow:"hidden", position:"relative" }}>
-                    <div className="bar-fill" style={{ height:"100%", width:`${pct}%`, background:`linear-gradient(90deg, ${HEALTH_COLOR[h]}CC, ${HEALTH_COLOR[h]})`, borderRadius:6, boxShadow:`0 0 12px ${HEALTH_GLOW[h]}` }} />
+                <div key={it.id} className="bar-container" onClick={() => setSelectedChartItem(it)} style={{ display:"flex", alignItems:"center", gap:12 }}>
+                  <div className="chart-label" style={{ width:150, minWidth:100, flexShrink:0, fontSize:12, color:"#8B8BAD", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", textAlign:"right" }}>{it.name}</div>
+                  <div style={{ flex:1, height:20, background:"rgba(255,255,255,.02)", borderRadius:6, overflow:"hidden", position:"relative" }}>
+                    <div className="bar-fill" style={{ height:"100%", width:`${pct}%`, background:`linear-gradient(90deg, ${HEALTH_COLOR[h]}CC, ${HEALTH_COLOR[h]})`, borderRadius:6, boxShadow:`0 0 10px ${HEALTH_GLOW[h]}` }} />
                   </div>
-                  <div style={{ width:45, textAlign:"right", flexShrink:0, fontSize:13, fontWeight:700, color: HEALTH_COLOR[h] }}>{it.stock}</div>
+                  <div style={{ width:35, textAlign:"right", flexShrink:0, fontSize:12, fontWeight:700, color: HEALTH_COLOR[h] }}>{it.stock}</div>
                 </div>
               );
             })}
           </div>
         </section>
 
-        {/* 3. Tabel Utama Manajemen Stok (BARU LIST BARANG DI SINI) */}
+        {/* 3. Manajemen Stok (PENCARIAN & TAMBAH BARANG DIPINDAH KE SINI) */}
         <section className="card" style={{ ...S.card, padding:0, overflow:"hidden" }}>
-          <div style={{ padding:"22px 24px 14px" }}>
-            <div style={S.cardTitle}>Manajemen Stok Utama Toko</div>
-          </div>
-          <div className="table-scrollable">
-            <div style={{ minWidth: 780 }}>
-              <div style={S.tableHeader}>
-                <span style={S.colName}>Nama Barang</span>
-                <span style={S.colPrice}>Harga</span>
-                <span style={S.colQtyContainer}>Ubah Stok</span>
-                <span style={S.colMin}>Min</span>
-                <span style={S.colStatus}>Status</span>
-                <span style={S.colActions}>Aksi</span>
+          
+          {/* Header Tabel Utama */}
+          <div style={{ padding: "20px 20px 14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, borderBottom: "1px solid rgba(139,92,246,0.08)" }}>
+            <div>
+              <div style={S.cardTitle}>Manajemen Stok Utama Toko</div>
+              <div style={S.cardSub}>Kelola jumlah kuantitas, harga, dan batas aman item</div>
+            </div>
+
+            {/* Tempat Baru: Mengisi area kosong sebelah kanan secara presisi */}
+            <div className="table-action-header">
+              <div style={S.searchWrap}>
+                <input
+                  className="inp search-input-box"
+                  style={S.searchInp}
+                  placeholder="Cari nama barang..." 
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
               </div>
-              <div>
-                {filtered.map((it) => {
-                  const h = stockHealth(it.stock, it.min);
-                  return (
-                    <div key={it.id} className="row" style={{ ...S.tableRow, borderLeft:`4px solid ${HEALTH_COLOR[h]}` }}>
-                      <div style={S.colName}><span style={{ fontSize:14, color:"#E9E3FF", fontWeight:500 }}>{it.name}</span></div>
-                      <div style={S.colPrice}>{formatRupiah(it.price)}</div>
-                      <div style={S.colQtyContainer}>
-                        <button className="btn-qty" onClick={() => decrement(it.id)} style={SF.btnQty("#EF4444","rgba(239,68,68,.15)")}>−</button>
-                        <input className="stock-inp inp" type="number" value={it.stock} onChange={e => editStock(it.id, e.target.value)} style={S.stockInp} />
-                        <button className="btn-qty" onClick={() => increment(it.id)} style={SF.btnQty("#22C55E","rgba(34,197,94,.15)")}>+</button>
+              <button style={S.btnAdd} onClick={() => setShowModal(true)}>
+                <span style={{ fontSize:16, lineHeight:1, fontWeight:"bold", marginRight: 6 }}>+</span>
+                <span>Tambah Barang</span>
+              </button>
+            </div>
+          </div>
+
+          {/* LAYOUT DESKTOP: Berbentuk Tabel */}
+          <div className="desktop-table">
+            <div style={{ width: "100%", overflowX: "auto" }}>
+              <div style={{ minWidth: 800 }}>
+                <div style={S.tableHeader}>
+                  <span style={S.colName}>Nama Barang</span>
+                  <span style={S.colPrice}>Harga</span>
+                  <span style={S.colQtyContainer}>Ubah Stok</span>
+                  <span style={S.colMin}>Min</span>
+                  <span style={S.colStatus}>Status</span>
+                  <span style={S.colActions}>Aksi</span>
+                </div>
+                <div>
+                  {filtered.map((it) => {
+                    const h = stockHealth(it.stock, it.min);
+                    return (
+                      <div key={it.id} style={{ ...S.tableRow, borderLeft:`4px solid ${HEALTH_COLOR[h]}` }}>
+                        <div style={S.colName}><span style={{ fontSize:14, color:"#E9E3FF", fontWeight:500 }}>{it.name}</span></div>
+                        <div style={S.colPrice}>{formatRupiah(it.price)}</div>
+                        <div style={S.colQtyContainer}>
+                          <button className="btn-qty" onClick={() => decrement(it.id)} style={SF.btnQty("#EF4444","rgba(239,68,68,.15)")}>−</button>
+                          <input className="stock-inp inp" type="number" value={it.stock} onChange={e => editStock(it.id, e.target.value)} style={S.stockInp} />
+                          <button className="btn-qty" onClick={() => increment(it.id)} style={SF.btnQty("#22C55E","rgba(34,197,94,.15)")}>+</button>
+                        </div>
+                        <div style={S.colMin}>{it.min}</div>
+                        <div style={S.colStatus}><span style={SF.badge(h)}>{h === "ok" ? "✓ Aman" : h === "low" ? "⚠ Rendah" : "✕ Kritis"}</span></div>
+                        <div style={S.colActions}>
+                          <button onClick={() => openEditModal(it)} style={S.btnEdit}>✏</button>
+                          <button onClick={() => removeItem(it.id, it.name)} style={S.btnDel}>🗑</button>
+                        </div>
                       </div>
-                      <div style={S.colMin}>{it.min}</div>
-                      <div style={S.colStatus}><span style={SF.badge(h)}>{h === "ok" ? "✓ Aman" : h === "low" ? "⚠ Rendah" : "✕ Kritis"}</span></div>
-                      <div style={S.colActions}>
-                        <button onClick={() => openEditModal(it)} style={S.btnEdit}>✏</button>
-                        <button onClick={() => removeItem(it.id, it.name)} style={S.btnDel}>🗑</button>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
+          </div>
+
+          {/* LAYOUT MOBILE HP: Berubah Menjadi Card List */}
+          <div className="mobile-list">
+            {filtered.map((it) => {
+              const h = stockHealth(it.stock, it.min);
+              return (
+                <div key={it.id} style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(139,92,246,0.1)", borderRadius: 12, padding: 14, borderLeft: `5px solid ${HEALTH_COLOR[h]}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                    <div style={{ maxWidth: "70%" }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#FFF" }}>{it.name}</div>
+                      <div style={{ fontSize: 12, color: "#10B981", marginTop: 2 }}>{formatRupiah(it.price)}</div>
+                    </div>
+                    <span style={SF.badge(h)}>{h === "ok" ? "Aman" : h === "low" ? "Rendah" : "Kritis"}</span>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, background: "rgba(0,0,0,0.18)", padding: "8px 12px", borderRadius: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <button className="btn-qty" onClick={() => decrement(it.id)} style={{ width: 36, height: 36, borderRadius: 8, background: "rgba(239,68,68,0.2)", color: "#EF4444", border: "none", fontSize: 18, fontWeight: "bold" }}>−</button>
+                      <input className="inp" type="number" value={it.stock} onChange={e => editStock(it.id, e.target.value)} style={{ width: 52, height: 34, textAlign: "center", background: "#0a0a12", border: "1px solid #3B1F8C", borderRadius: 6, color: "#fff", fontWeight: "bold", fontSize: 14 }} />
+                      <button className="btn-qty" onClick={() => increment(it.id)} style={{ width: 36, height: 36, borderRadius: 8, background: "rgba(34,197,94,0.2)", color: "#22C55E", border: "none", fontSize: 18, fontWeight: "bold" }}>+</button>
+                    </div>
+                    
+                    <div style={{ display: "flex", gap: 14 }}>
+                      <button className="btn-action-mobile" onClick={() => openEditModal(it)} style={{ background: "transparent", border: "none", color: "#A78BFA", fontSize: 18, padding: 4 }}>✏</button>
+                      <button className="btn-action-mobile" onClick={() => removeItem(it.id, it.name)} style={{ background: "transparent", border: "none", color: "#EF4444", fontSize: 18, padding: 4 }}>🗑</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
 
-        {/* 4. Riwayat Aktivitas Log Toko */}
+        {/* 4. Riwayat Aktivitas Log */}
         <section className="card" style={S.card}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
             <div>
               <div style={S.cardTitle}>Riwayat Aktivitas Log Toko</div>
-              <div style={S.cardSub}>Mencatat seluruh aktivitas perubahan secara real-time tanpa batas</div>
+              <div style={S.cardSub}>Sinkronisasi aktivitas database lokal real-time</div>
             </div>
             {logs.length > 0 && (
-              <button onClick={clearLogs} style={S.btnResetLog}>Bersihkan Log</button>
+              <button onClick={clearLogs} style={S.btnResetLog}>Bersihkan</button>
             )}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {logs.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "30px 0", color: "#4A4A7A", fontSize: 13 }}>Belum ada riwayat aktivitas log di database pusat.</div>
+              <div style={{ textAlign: "center", padding: "20px 0", color: "#4A4A7A", fontSize: 12 }}>Belum ada riwayat aktivitas log.</div>
             ) : (
               logs.map((log) => {
                 const sty = LOG_STYLES[log.type] || LOG_STYLES.edit;
                 return (
                   <div key={log.id} style={S.logRow}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: "220px", flexShrink:0 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: "100px", flexShrink:0 }}>
                       <span style={SF.logBadge(sty.bg, sty.text)}>{sty.label}</span>
-                      <span style={{ fontSize: 12, color: "#4A4A7A" }}>{log.timestamp}</span>
+                      <span style={{ fontSize: 10, color: "#4A4A7A" }}>{log.timestamp.split(' · ')[1] || log.timestamp}</span>
                     </div>
-                    <div style={{ flex: 1, fontSize: 13, lineHeight: "1.4" }}>
+                    <div style={{ flex: 1, fontSize: 12, lineHeight: "1.4" }}>
                       <span style={{ color: "#A78BFA", fontWeight: 600 }}>{log.itemName}</span> {log.action}
-                      {log.details && <span style={{ fontSize: 12, color: "#5B5B8A", marginLeft: 8, fontStyle: "italic" }}>({log.details})</span>}
+                      {log.details && <div style={{ fontSize: 11, color: "#5B5B8A", marginTop: 2, fontStyle: "italic" }}>{log.details}</div>}
                     </div>
                   </div>
                 );
@@ -488,7 +546,7 @@ export default function StockPage() {
         </section>
 
         {/* Footer */}
-        <footer style={S.footer}>© 2026 LINGGA AUTOLAMP · Sistem Dashboard Manajemen Terintegrasi</footer>
+        <footer style={S.footer}>© 2026 LINGGA AUTOLAMP · Sistem Dashboard Terintegrasi</footer>
       </main>
 
       {/* ── MODAL TAMBAH BARANG ── */}
@@ -528,7 +586,7 @@ export default function StockPage() {
           <div className="modal-box" style={{ maxWidth: 360 }} onClick={e => e.stopPropagation()}>
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:16 }}><div style={{ fontSize:14, color:"#FBBF24", fontWeight:600 }}>Detail Informasi Stok</div><button onClick={() => setSelectedChartItem(null)} style={S.btnClose}>✕</button></div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "#E9E3FF" }}>{selectedChartItem.name}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#E9E3FF" }}>{selectedChartItem.name}</div>
               <div style={{ height:"1px", background:"rgba(139,92,246,0.15)" }}></div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                 <span style={{ color: "#8B8BAD" }}>Harga Unit:</span>
@@ -547,10 +605,10 @@ export default function StockPage() {
         </div>
       )}
 
-      {/* Toast Notifikasi */}
-      <div style={{ position:"fixed", bottom:16, right:16, zIndex:300, display:"flex", flexDirection:"column", gap:6 }}>
+      {/* Toast Notification Container */}
+      <div style={{ position:"fixed", bottom:16, right:16, zIndex:300, display:"flex", flexDirection:"column", gap:6, maxWidth: "calc(100% - 32px)" }}>
         {toasts.map(t => (
-          <div key={t.id} style={{ background: t.ok ? "#7C3AED" : "#EF4444", padding:"10px 16px", borderRadius:10, fontSize:13, boxShadow:"0 4px 12px rgba(0,0,0,0.3)" }}>{t.msg}</div>
+          <div key={t.id} style={{ background: t.ok ? "#7C3AED" : "#EF4444", color: "#fff", padding:"10px 16px", borderRadius:10, fontSize:13, boxShadow:"0 4px 12px rgba(0,0,0,0.3)" }}>{t.msg}</div>
         ))}
       </div>
     </div>
@@ -559,11 +617,11 @@ export default function StockPage() {
 
 function StatCard({ label, value, sub, accent }: { label: string; value: string | number; sub: string; accent: string; }) {
   return (
-    <div className="card" style={{ background:"#13132a", border:"1px solid rgba(139,92,246,.15)", borderRadius:12, padding:"16px 20px", display:"flex", alignItems:"center", marginBottom:0 }}>
+    <div style={{ background:"#13132a", border:"1px solid rgba(139,92,246,.15)", borderRadius:12, padding:"12px 14px", display:"flex", alignItems:"center" }}>
       <div>
-        <div style={{ fontSize:11, color:"#5B5B8A", textTransform:"uppercase", fontWeight:600, letterSpacing:"0.5px" }}>{label}</div>
-        <div style={{ fontSize:22, fontWeight:700, color:"#fff", marginTop:4 }}>{value}</div>
-        <div style={{ fontSize:11, color:accent, marginTop:2 }}>{sub}</div>
+        <div style={{ fontSize:10, color:"#5B5B8A", textTransform:"uppercase", fontWeight:600, letterSpacing:"0.5px" }}>{label}</div>
+        <div style={{ fontSize:18, fontWeight:700, color:"#fff", marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{value}</div>
+        <div style={{ fontSize:10, color:accent, marginTop:2 }}>{sub}</div>
       </div>
     </div>
   );
@@ -571,40 +629,40 @@ function StatCard({ label, value, sub, accent }: { label: string; value: string 
 
 const S: Record<string, React.CSSProperties> = {
   root: { minHeight:"100vh", background:"#0a0a12", fontFamily:"'Inter', sans-serif", color:"#E9E3FF" },
-  header: { background:"rgba(13,13,26,.96)", borderBottom:"1px solid rgba(139,92,246,.2)", position:"sticky", top:0, zIndex:100 },
-  headerInner: { maxWidth: "1440px", margin:"0 auto", padding:"14px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" },
-  searchWrap: { display:"flex", alignItems:"center", background:"rgba(139,92,246,.06)", border:"1px solid rgba(139,92,246,.15)", borderRadius:8, padding:"5px 12px" },
-  searchInp: { background:"transparent", border:"none", color:"#fff", width:150, fontSize: 13 },
-  btnAdd: { padding:"7px 16px", background:"linear-gradient(135deg,#7C3AED,#6025C0)", color:"#fff", border:"none", borderRadius:8, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", fontSize:13 },
-  main: { maxWidth: "1440px", width: "100%", margin:"0 auto", padding:"24px 24px" },
-  card: { background:"#13132a", border:"1px solid rgba(139,92,246,.15)", borderRadius:16, padding:"24px" },
+  header: { background:"rgba(13,13,26,.96)", borderBottom:"1px solid rgba(139,92,246,.15)", position:"sticky", top:0, zIndex:100 },
+  headerInner: { maxWidth: "1440px", margin:"0 auto", padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" },
+  searchWrap: { display:"flex", alignItems:"center", background:"rgba(139,92,246,.06)", border:"1px solid rgba(139,92,246,.15)", borderRadius:8, padding:"6px 12px", width: 180, maxWidth: "100%" },
+  searchInp: { background:"transparent", border:"none", color:"#fff", width:"100%", fontSize: 13 },
+  btnAdd: { padding:"8px 14px", background:"linear-gradient(135deg,#7C3AED,#6025C0)", color:"#fff", border:"none", borderRadius:8, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", fontSize:13, flexShrink:0 },
+  main: { maxWidth: "1440px", width: "100%", margin:"0 auto", padding:"16px" },
+  card: { background:"#13132a", border:"1px solid rgba(139,92,246,.15)", borderRadius:16, padding:"16px 20px" },
   cardHead: { display:"flex", justifyContent:"space-between", alignItems: "flex-start" },
-  cardTitle: { fontSize:16, fontWeight:700, color:"#E9E3FF" },
-  cardSub: { fontSize:12, color:"#5B5B8A", marginTop:4 },
-  colName: { flex: "2 1 240px", display: "flex", alignItems: "center" },
-  colPrice: { width: 140, color: "#10B981", fontWeight: 600, fontSize: 14 },
-  colQtyContainer: { width: 140, display: "flex", alignItems: "center", gap: 6 },
-  colMin: { width: 60, textAlign: "center", color: "#8B8BAD", fontSize: 14 },
-  colStatus: { width: 110, display: "flex" },
-  colActions: { width: 80, display: "flex", gap: 12, justifyContent: "flex-end" },
-  tableHeader: { display:"flex", padding:"14px 24px", borderBottom:"1px solid rgba(139,92,246,.15)", fontSize:12, color:"#5B5B8A", fontWeight:700, gap:12, background: "rgba(255,255,255,0.01)" },
-  tableRow: { display:"flex", alignItems:"center", padding:"14px 24px", gap:12, borderBottom:"1px solid rgba(139,92,246,.06)" },
-  stockInp: { width:44, height:30, borderRadius:8, background:"rgba(139,92,246,.06)", border:"1px solid rgba(139,92,246,.25)", color:"#fff", textAlign:"center", fontWeight:700, fontSize: 13 },
-  btnEdit: { background:"transparent", border:"none", color:"#A78BFA", cursor:"pointer", fontSize:15 },
-  btnDel: { background:"transparent", border:"none", color:"#EF4444", cursor:"pointer", fontSize:15 },
+  cardTitle: { fontSize:15, fontWeight:700, color:"#E9E3FF" },
+  cardSub: { fontSize:11, color:"#5B5B8A", marginTop:2 },
+  colName: { flex: "2 1 200px", display: "flex", alignItems: "center" },
+  colPrice: { width: 130, color: "#10B981", fontWeight: 600, fontSize: 13 },
+  colQtyContainer: { width: 130, display: "flex", alignItems: "center", gap: 6 },
+  colMin: { width: 50, textAlign: "center", color: "#8B8BAD", fontSize: 13 },
+  colStatus: { width: 100, display: "flex" },
+  colActions: { width: 70, display: "flex", gap: 12, justifyContent: "flex-end" },
+  tableHeader: { display:"flex", padding:"12px 20px", borderBottom:"1px solid rgba(139,92,246,.15)", fontSize:11, color:"#5B5B8A", fontWeight:700, gap:12, background: "rgba(255,255,255,0.01)" },
+  tableRow: { display:"flex", alignItems:"center", padding:"12px 20px", gap:12, borderBottom:"1px solid rgba(139,92,246,.06)", background: "rgba(255,255,255,0.01)" },
+  stockInp: { width:42, height:28, borderRadius:6, background:"rgba(139,92,246,.06)", border:"1px solid rgba(139,92,246,.25)", color:"#fff", textAlign:"center", fontWeight:700, fontSize: 13 },
+  btnEdit: { background:"transparent", border:"none", color:"#A78BFA", cursor:"pointer", fontSize:14, padding:4 },
+  btnDel: { background:"transparent", border:"none", color:"#EF4444", cursor:"pointer", fontSize:14, padding:4 },
   btnClose: { background:"transparent", border:"none", color:"#8B8BAD", cursor:"pointer" },
   formLabel: { display:"flex", flexDirection:"column", gap:4, fontSize:12, color:"#8B8BAD" },
   formInput: { background:"#0a0a12", border:"1px solid rgba(139,92,246,.25)", borderRadius:8, padding:"10px", color:"#fff", fontSize:13 },
   btnCancel: { padding:"8px 16px", borderRadius:8, background:"transparent", color:"#8B8BAD", border:"1px solid rgba(139,92,246,.2)", cursor:"pointer", fontSize:13 },
   btnSave: { padding:"8px 18px", borderRadius:8, background:"linear-gradient(135deg,#7C3AED,#6025C0)", color:"#fff", border:"none", fontWeight:600, cursor:"pointer", fontSize:13 },
-  logRow: { display: "flex", alignItems: "center", gap: 16, padding: "12px 16px", background: "rgba(255,255,255,0.01)", border: "1px solid rgba(139,92,246,0.05)", borderRadius: "10px" },
-  btnResetLog: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "6px", color: "#FCA5A5", fontSize: "12px", cursor: "pointer", padding: "4px 12px" },
-  footer: { textAlign:"center", padding:"24px 0 10px", color:"#4A4A7A", fontSize:12 }
+  logRow: { display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 12px", background: "rgba(255,255,255,0.01)", border: "1px solid rgba(139,92,246,0.05)", borderRadius: "10px" },
+  btnResetLog: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "6px", color: "#FCA5A5", fontSize: "11px", cursor: "pointer", padding: "2px 8px" },
+  footer: { textAlign:"center", padding:"20px 0 10px", color:"#4A4A7A", fontSize:11 }
 };
 
 const SF = {
-  chip: (active: boolean): React.CSSProperties => ({ padding:"5px 12px", borderRadius:6, fontSize:12, cursor:"pointer", background: active ? "#7C3AED" : "transparent", color: active ? "#fff" : "#8B8BAD", border:"1px solid rgba(139,92,246,.2)", transition:"all 0.15s" }),
-  btnQty: (color: string, bg: string): React.CSSProperties => ({ width:30, height:30, borderRadius:8, background:bg, color:color, border:"none", fontSize:16, cursor:"pointer" }),
-  badge: (h: "ok"|"low"|"critical"): React.CSSProperties => ({ padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:600, display:"inline-block", background: h === "ok" ? "rgba(139,92,246,.12)" : h === "low" ? "rgba(245,158,11,.12)" : "rgba(239,68,68,.12)", color: h === "ok" ? "#A78BFA" : h === "low" ? "#FBBF24" : "#FCA5A5" }),
-  logBadge: (bg: string, text: string): React.CSSProperties => ({ padding: "4px 8px", borderRadius: "6px", fontSize: "10px", fontWeight: 700, background: bg, color: text, width: "95px", display:"inline-block", textAlign:"center", flexShrink:0 })
+  chip: (active: boolean): React.CSSProperties => ({ padding:"4px 10px", borderRadius:6, fontSize:11, cursor:"pointer", background: active ? "#7C3AED" : "transparent", color: active ? "#fff" : "#8B8BAD", border:"1px solid rgba(139,92,246,.2)", transition:"all 0.15s" }),
+  btnQty: (color: string, bg: string): React.CSSProperties => ({ width:28, height:28, borderRadius:6, background:bg, color:color, border:"none", fontSize:15, cursor:"pointer" }),
+  badge: (h: "ok"|"low"|"critical"): React.CSSProperties => ({ padding:"3px 8px", borderRadius:5, fontSize:10, fontWeight:600, display:"inline-block", background: h === "ok" ? "rgba(139,92,246,.12)" : h === "low" ? "rgba(245,158,11,.12)" : "rgba(239,68,68,.12)", color: h === "ok" ? "#A78BFA" : h === "low" ? "#FBBF24" : "#FCA5A5" }),
+  logBadge: (bg: string, text: string): React.CSSProperties => ({ padding: "3px 6px", borderRadius: "5px", fontSize: "9px", fontWeight: 700, background: bg, color: text, width: "85px", display:"inline-block", textAlign:"center", flexShrink:0 })
 };
