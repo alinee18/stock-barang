@@ -89,7 +89,7 @@ export default function StockPage() {
   const [chartView, setChartView] = useState<"all" | "low">("all");
   const toastCounter = useRef(0);
 
-  // ── AMBIL DATA DARI LOCAL STORAGE (VERSI `v5` AGAR AWET) ──
+  // ── AMBIL DATA DARI LOCAL STORAGE ──
   useEffect(() => {
     try {
       const savedItems = localStorage.getItem("inv-items-v5");
@@ -120,7 +120,6 @@ export default function StockPage() {
       action,
       details
     };
-    // HAPUS BATASAN LOG (TIDAK PAKAI SLICE LAGI)
     setLogs(prev => [newEntry, ...prev]);
   }
 
@@ -232,7 +231,7 @@ export default function StockPage() {
   }
 
   function clearLogs() {
-    if (!confirm("Apakah Anda yakin ingin menghapus seluruh riwayat aktivitas log ini di browser laptop Anda?")) return;
+    if (!confirm("Apakah Anda yakin ingin menghapus seluruh riwayat aktivitas log ini?")) return;
     setLogs([]);
     toast("Seluruh riwayat aktivitas dibersihkan");
   }
@@ -271,7 +270,7 @@ export default function StockPage() {
     <div style={S.root}>
       {/* ── Global CSS ── */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
         html { scroll-behavior: smooth; }
         body { background:#0a0a12; overflow-x:hidden; }
@@ -324,9 +323,7 @@ export default function StockPage() {
 
         .stock-inp:focus { outline:none; border-color:#7C3AED !important; }
         .stock-inp { text-align:center; }
-        .badge-critical { animation: pulse2 1.8s infinite; }
 
-        /* Responsif di HP */
         @media (max-width:768px) {
           .hide-md { display:none !important; }
           .chart-label { font-size:11px !important; max-width:90px !important; width:90px !important; }
@@ -340,13 +337,26 @@ export default function StockPage() {
         }
       `}</style>
 
-      {/* ── HEADER ── */}
+      {/* ── HEADER (LOGO ASLI SUDAH DIKEMBALIKAN) ── */}
       <header style={S.header}>
         <div style={S.headerInner}>
-          <div className="brand-container" style={S.brandContainer}>
-            <div style={S.textWrap}>
-              <span className="logo-text" style={S.logoTextPrimary}>LINGGA</span>
-              <span className="logo-text" style={S.logoTextSecondary}>AUTOLAMP</span>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            {/* Memanggil file gambar logo asli toko kamu */}
+            <img 
+              src="/logo.png" 
+              alt="Lingga Autolamp Logo" 
+              style={{ height: "32px", width: "auto", display: "block" }} 
+              onError={(e) => {
+                // Alternatif cadangan jika logo.png gagal terload di local dev
+                e.currentTarget.style.display = 'none';
+                if(e.currentTarget.nextSibling) {
+                  (e.currentTarget.nextSibling as HTMLElement).style.display = 'block';
+                }
+              }}
+            />
+            {/* Teks cadangan otomatis tersembunyi, hanya muncul jika file logo.png hilang */}
+            <div style={{ display: "none", fontFamily: "sans-serif", fontWeight: "bold" }}>
+              <span style={{ color: "#fff" }}>LINGGA</span> <span style={{ color: "#FBBF24" }}>AUTOLAMP</span>
             </div>
           </div>
 
@@ -376,16 +386,16 @@ export default function StockPage() {
           <StatCard label="Jenis Barang" value={totalTypes.toLocaleString("id-ID")} sub="item terdaftar" accent="#8B5CF6" delay={0}/>
           <StatCard label="Total Stok" value={totalStock.toLocaleString("id-ID")} sub="unit tersedia" accent="#A78BFA" delay={60}/>
           <StatCard label="Stok Rendah" value={lowCount.toLocaleString("id-ID")} sub="perlu order lagi" accent={lowCount > 0 ? "#F59E0B" : "#22C55E"} delay={120}/>
-          <StatCard label="Nilai Inventory" value={formatRupiah(totalValue)} sub="total modal" accent="#10B981" delay={180}/>
+          <StatCard label="Nilai Inventory" value={formatRupiah(totalValue)} sub="total nilai modal" accent="#10B981" delay={180}/>
         </div>
 
         {/* ── Chart Grafis ── */}
         <section className="card" style={{ ...S.card, animationDelay:"180ms" }}>
           <div style={S.cardHead}>
             <div>
-              <div style={S.cardTitle}>Grafik Kontrol Stok</div>
+              <div style={S.cardTitle}>Grafik Batas Stok</div>
               <div style={S.cardSub}>
-                {chartView === "all" ? `Semua ${items.length} item` : `${lowCount} item stok rendah`} · <span style={{color: "#A78BFA"}}>Klik grafis untuk info detail</span>
+                Semua {items.length} item · <span style={{color: "#A78BFA"}}>Klik baris grafis untuk info lengkap</span>
               </div>
             </div>
             <div style={{ display:"flex", gap:6, flexShrink:0 }}>
@@ -460,7 +470,7 @@ export default function StockPage() {
           </div>
         </section>
 
-        {/* ── KARTU RIWAYAT LOG AKTIVITAS (TANPA BATAS & LOCAL ONLY) ── */}
+        {/* ── KARTU RIWAYAT LOG AKTIVITAS ── */}
         <section className="card" style={{ ...S.card, animationDelay:"300ms", padding: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
             <div>
@@ -527,7 +537,6 @@ export default function StockPage() {
         </div>
       )}
 
-      {/* Detail Chart Modal (Tetap Ada) */}
       {selectedChartItem && (
         <div className="modal-overlay" onClick={() => setSelectedChartItem(null)}>
           <div className="modal-box" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
@@ -557,9 +566,6 @@ const S = {
   root: { minHeight:"100vh", background:"#0a0a12", fontFamily:"'Inter', sans-serif", color:"#E9E3FF" },
   header: { position:"sticky" as const, top:0, zIndex:100, background:"rgba(13,13,26,.96)", borderBottom:"1px solid rgba(139,92,246,.2)" },
   headerInner: { maxWidth: "1100px", margin:"0 auto", padding:"16px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" },
-  brandContainer: { display: "flex", gap: "6px", fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 900 },
-  logoTextPrimary: { color: "#FFFFFF" },
-  logoTextSecondary: { color: "#FBBF24" },
   searchWrap: { display:"flex", alignItems:"center", background:"rgba(139,92,246,.06)", border:"1px solid rgba(139,92,246,.15)", borderRadius:10, padding:"6px 12px" },
   searchInp: { background:"transparent", border:"none", color:"#fff", width:120 },
   btnAdd: { padding:"8px 16px", background:"linear-gradient(135deg,#7C3AED,#6025C0)", color:"#fff", border:"none", borderRadius:10, fontWeight:600, cursor:"pointer" },
