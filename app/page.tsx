@@ -251,7 +251,7 @@ export default function StockPage() {
   }
 
   function clearLogs() {
-    if (confirm("Hapus semua riwayat aktivitas hari ini?")) {
+    if (confirm("Hapus semua riwayat aktivitas?")) {
       setLogs([]);
     }
   }
@@ -353,8 +353,6 @@ export default function StockPage() {
           .logo-img { height: 42px !important; }
           .logo-text { font-size: 14px !important; letter-spacing: 0.05em !important; }
           .brand-container { gap: 6px !important; }
-          .desktop-layout { flex-direction: column !important; }
-          .right-panel { width: 100% !important; }
         }
         @media (max-width:640px) {
           .hide-sm { display:none !important; }
@@ -469,151 +467,107 @@ export default function StockPage() {
           />
         </div>
 
-        {/* Layout Grid: Grafik & Riwayat Berdampingan di Desktop */}
-        <div className="desktop-layout" style={{ display: "flex", gap: 24, alignItems: "stretch" }}>
-          
-          {/* Kiri: Grafik Batas Stok */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <section className="card" style={{ ...S.card, height: "100%", animationDelay:"180ms" }}>
-              <div style={S.cardHead}>
-                <div>
-                  <div style={S.cardTitle}>Grafik Batas Stok</div>
-                  <div style={S.cardSub}>
-                    {chartView === "all" ? `Semua ${items.length} item` : `${lowCount} item stok rendah`} · <span style={{color: "#A78BFA"}}>Klik baris grafis untuk info lengkap</span>
-                  </div>
-                </div>
-                <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-                  {(["all","low"] as const).map(v => (
-                    <button
-                      key={v}
-                      className={`chip ${chartView === v ? "chip-active" : ""}`}
-                      style={S.chip(chartView === v)}
-                      onClick={() => setChartView(v)}
+        {/* ── Grafik Batas Stok (Full Width) ── */}
+        <section className="card" style={{ ...S.card, animationDelay:"180ms" }}>
+          <div style={S.cardHead}>
+            <div>
+              <div style={S.cardTitle}>Grafik Batas Stok</div>
+              <div style={S.cardSub}>
+                {chartView === "all" ? `Semua ${items.length} item` : `${lowCount} item stok rendah`} · <span style={{color: "#A78BFA"}}>Klik baris grafis untuk info lengkap</span>
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+              {(["all","low"] as const).map(v => (
+                <button
+                  key={v}
+                  className={`chip ${chartView === v ? "chip-active" : ""}`}
+                  style={S.chip(chartView === v)}
+                  onClick={() => setChartView(v)}
+                >
+                  {v === "all" ? "Tampilkan Semua" : "⚠ Stok Rendah"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {chartItems.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"40px 0", color:"#4A4A7A", fontSize:13 }}>
+              {chartView === "low" ? "Semua stok dalam keadaan aman! 🎉" : "Belum ada data barang"}
+            </div>
+          ) : (
+            <div style={{ display:"flex", flexDirection:"column", gap:10, paddingTop:4 }}>
+              {chartItems.map((it, idx) => {
+                const pct   = maxStock > 0 ? (it.stock / maxStock) * 100 : 0;
+                const h     = stockHealth(it.stock, it.min);
+                const color = HEALTH_COLOR[h];
+                const glow  = HEALTH_GLOW[h];
+                return (
+                  <div key={it.id} 
+                    className="bar-container"
+                    onClick={() => setSelectedChartItem(it)}
+                    style={{ display:"flex", alignItems:"center", gap:12,
+                    animation:`fadeUp .35s ease both`, animationDelay:`${idx * 12}ms` }}>
+
+                    <div
+                      className="chart-label"
+                      title={it.name}
+                      style={{
+                        width:150, minWidth:100, flexShrink:0,
+                        fontSize:13, color:"#A78BFA", fontWeight: 500,
+                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                        textAlign:"right",
+                      }}
                     >
-                      {v === "all" ? "Tampilkan Semua" : "⚠ Stok Rendah"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {chartItems.length === 0 ? (
-                <div style={{ textAlign:"center", padding:"40px 0", color:"#4A4A7A", fontSize:13 }}>
-                  {chartView === "low" ? "Semua stok dalam keadaan aman! 🎉" : "Belum ada data barang"}
-                </div>
-              ) : (
-                <div style={{ display:"flex", flexDirection:"column", gap:10, paddingTop:4 }}>
-                  {chartItems.map((it, idx) => {
-                    const pct   = maxStock > 0 ? (it.stock / maxStock) * 100 : 0;
-                    const h     = stockHealth(it.stock, it.min);
-                    const color = HEALTH_COLOR[h];
-                    const glow  = HEALTH_GLOW[h];
-                    return (
-                      <div key={it.id} 
-                        className="bar-container"
-                        onClick={() => setSelectedChartItem(it)}
-                        style={{ display:"flex", alignItems:"center", gap:12,
-                        animation:`fadeUp .35s ease both`, animationDelay:`${idx * 12}ms` }}>
-
-                        <div
-                          className="chart-label"
-                          title={it.name}
-                          style={{
-                            width:120, minWidth:90, flexShrink:0,
-                            fontSize:13, color:"#A78BFA", fontWeight: 500,
-                            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-                            textAlign:"right",
-                          }}
-                        >
-                          {it.name}
-                        </div>
-
-                        <div style={{ flex:1, height:26, background:"rgba(255,255,255,.03)",
-                          borderRadius:6, overflow:"hidden", position:"relative" }}>
-                          <div
-                            className="bar-fill"
-                            style={{
-                              height:"100%",
-                              width:`${Math.max(pct, it.stock > 0 ? 1 : 0)}%`,
-                              background:`linear-gradient(90deg, ${color}CC, ${color})`,
-                              borderRadius:6,
-                              boxShadow:`0 0 10px ${glow}`,
-                            }}
-                          />
-                          {maxStock > 0 && (
-                            <div style={{
-                              position:"absolute", top:0, bottom:0,
-                              left:`${(it.min / maxStock) * 100}%`,
-                              width:2, background:"#fff", opacity: 0.4
-                            }} />
-                          )}
-                        </div>
-
-                        <div style={{
-                          width:40, textAlign:"right", flexShrink:0,
-                          fontSize:14, fontWeight:700,
-                          color: color,
-                          fontVariantNumeric:"tabular-nums",
-                        }}>
-                          {it.stock}
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  <div style={{ display:"flex", gap:16, paddingTop:14,
-                    borderTop:"1px solid rgba(139,92,246,.1)", flexWrap:"wrap", marginTop:8 }}>
-                    {([["ok","#8B5CF6","Aman"],["low","#F59E0B","Menipis"],["critical","#EF4444","Habis"]] as const).map(
-                      ([,color,label]) => (
-                        <div key={label} style={{ display:"flex", alignItems:"center", gap:6 }}>
-                          <div style={{ width:12, height:12, borderRadius:4, background:color }} />
-                          <span style={{ fontSize:12, color:"#8B8BAD" }}>{label}</span>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
-            </section>
-          </div>
-
-          {/* Kanan: Riwayat Aktivitas Real-time */}
-          <div className="right-panel" style={{ width: "340px", flexShrink: 0 }}>
-            <section className="card" style={{ ...S.card, height: "100%", display: "flex", flexDirection: "column" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
-                <div>
-                  <div style={S.cardTitle}>Riwayat Aktivitas</div>
-                  <div style={S.cardSub}>Log mutasi & aksi stok hari ini</div>
-                </div>
-                {logs.length > 0 && (
-                  <button onClick={clearLogs} style={{ background: "transparent", border: "none", color: "#EF4444", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
-                    Bersihkan
-                  </button>
-                )}
-              </div>
-
-              <div style={{ flex: 1, overflowY: "auto", maxHeight: "320px", display: "flex", flexDirection: "column", gap: 8, paddingRight: 4 }}>
-                {logs.length === 0 ? (
-                  <div style={{ textCombineUpright: "center", textAlign: "center", color: "#4A4A7A", fontSize: 12, padding: "40px 0", margin: "auto" }}>
-                    Belum ada aktivitas terekam.
-                  </div>
-                ) : (
-                  logs.map((log) => (
-                    <div key={log.id} style={{ padding: "10px 12px", background: "rgba(255,255,255,0.02)", borderRadius: 10, borderLeft: `3px solid ${log.type === 'add' ? '#22C55E' : log.type === 'remove' ? '#EF4444' : log.type === 'update' ? '#FBBF24' : '#8B5CF6'}`, display: "flex", flexDirection: "column", gap: 3 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#5B5B8A" }}>
-                        <span style={{ fontWeight: 700, textTransform: "uppercase", color: log.type === 'add' ? '#22C55E' : log.type === 'remove' ? '#EF4444' : log.type === 'update' ? '#FBBF24' : '#A78BFA' }}>
-                          {log.type === 'qty_change' ? 'Stok' : log.type}
-                        </span>
-                        <span>{log.timestamp}</span>
-                      </div>
-                      <div style={{ fontSize: 12, color: "#E9E3FF", lineHeight: 1.3 }}>{log.action}</div>
+                      {it.name}
                     </div>
-                  ))
+
+                    <div style={{ flex:1, height:26, background:"rgba(255,255,255,.03)",
+                      borderRadius:6, overflow:"hidden", position:"relative" }}>
+                      <div
+                        className="bar-fill"
+                        style={{
+                          height:"100%",
+                          width:`${Math.max(pct, it.stock > 0 ? 1 : 0)}%`,
+                          background:`linear-gradient(90deg, ${color}CC, ${color})`,
+                          borderRadius:6,
+                          boxShadow:`0 0 10px ${glow}`,
+                        }}
+                      />
+                      {maxStock > 0 && (
+                        <div style={{
+                          position:"absolute", top:0, bottom:0,
+                          left:`${(it.min / maxStock) * 100}%`,
+                          width:2, background:"#fff", opacity: 0.4
+                        }} />
+                      )}
+                    </div>
+
+                    <div style={{
+                      width:40, textAlign:"right", flexShrink:0,
+                      fontSize:14, fontWeight:700,
+                      color: color,
+                      fontVariantNumeric:"tabular-nums",
+                    }}>
+                      {it.stock}
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div style={{ display:"flex", gap:16, paddingTop:14,
+                borderTop:"1px solid rgba(139,92,246,.1)", flexWrap:"wrap", marginTop:8 }}>
+                {([["ok","#8B5CF6","Aman (Di atas target)"],["low","#F59E0B","Menipis (≤ Batas Min)"],["critical","#EF4444","Habis/Kosong"]] as const).map(
+                  ([,color,label]) => (
+                    <div key={label} style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <div style={{ width:12, height:12, borderRadius:4, background:color }} />
+                      <span style={{ fontSize:12, color:"#8B8BAD" }}>{label}</span>
+                    </div>
+                  )
                 )}
               </div>
-            </section>
-          </div>
-
-        </div>
+            </div>
+          )}
+        </section>
 
         {/* ── Tabel Utama / Management Stok ── */}
         <section className="card" style={{ ...S.card, padding:0, overflow:"hidden", animationDelay:"240ms" }}>
@@ -722,6 +676,42 @@ export default function StockPage() {
             </div>
           </div>
         </section>
+
+        {/* ── Riwayat Aktivitas (Sekarang Berada di Bawah Sendiri) ── */}
+        <section className="card" style={{ ...S.card, animationDelay: "300ms" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div>
+              <div style={S.cardTitle}>Riwayat Aktivitas Log</div>
+              <div style={S.cardSub}>Catatan mutasi perubahan, penambahan, dan penghapusan stok barang</div>
+            </div>
+            {logs.length > 0 && (
+              <button onClick={clearLogs} style={{ background: "transparent", border: "none", color: "#EF4444", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                🗑 Bersihkan Riwayat
+              </button>
+            )}
+          </div>
+
+          <div style={{ overflowY: "auto", maxHeight: "240px", display: "flex", flexDirection: "column", gap: 10, paddingRight: 4 }}>
+            {logs.length === 0 ? (
+              <div style={{ textAlign: "center", color: "#4A4A7A", fontSize: 13, padding: "30px 0" }}>
+                Belum ada aktivitas terekam.
+              </div>
+            ) : (
+              logs.map((log) => (
+                <div key={log.id} style={{ padding: "12px 16px", background: "rgba(255,255,255,0.02)", borderRadius: 10, borderLeft: `4px solid ${log.type === 'add' ? '#22C55E' : log.type === 'remove' ? '#EF4444' : log.type === 'update' ? '#FBBF24' : '#8B5CF6'}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: log.type === 'add' ? '#22C55E' : log.type === 'remove' ? '#EF4444' : log.type === 'update' ? '#FBBF24' : '#A78BFA' }}>
+                      {log.type === 'qty_change' ? 'Perubahan Stok' : log.type}
+                    </span>
+                    <div style={{ fontSize: 13, color: "#E9E3FF", lineHeight: 1.4 }}>{log.action}</div>
+                  </div>
+                  <span style={{ fontSize: 11, color: "#5B5B8A", whiteSpace: "nowrap" }}>{log.timestamp}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
       </main>
 
       <footer style={{ textAlign:"center", padding:"40px 24px", color:"#4A4A7A", fontSize:12 }}>
@@ -977,7 +967,7 @@ const S = {
     fontFamily: "'Outfit', sans-serif",
     fontSize: "20px",
     fontWeight: 900,
-    color: "#FBBF24", // Yellow accent
+    color: "#FBBF24", 
     letterSpacing: "0.08em",
     textShadow: "0 0 15px rgba(251,191,36,0.4)",
   } as React.CSSProperties,
