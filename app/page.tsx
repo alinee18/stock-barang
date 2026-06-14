@@ -360,7 +360,7 @@ export default function StockPage() {
               <span style={{ color: "#FBBF24", marginLeft: "4px" }}>AUTOLAMP</span>
             </div>
           </div>
-          <span style={{ fontSize: 11, color: "#4A4A7A", fontWeight: 500 }} className="hide-sm">v5.2 Stable Deployment</span>
+          <span style={{ fontSize: 11, color: "#4A4A7A", fontWeight: 500 }} className="hide-sm">-</span>
         </div>
       </header>
 
