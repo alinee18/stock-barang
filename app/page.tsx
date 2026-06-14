@@ -1,12 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-// ── KONFIGURASI DATABASE ONLINE (SUDAH AKTIF) ──
-const SUPABASE_URL = "https://irbshgwedbbyvqyvshsn.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyYnNoZ3dlZGJieXZxeXZzaHNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTgzNTI0MDAsImV4cCI6MjAzMzkyODQwMH0.bXN4N1U2M1g5VTVVMTVVMTVVMTVVMTVVMTVVMTVVMTVVMTVV";
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 interface Item {
   id: string;
@@ -89,83 +83,36 @@ export default function StockPage() {
   const [editMin, setEditMin] = useState("15");
   const [editPrice, setEditPrice] = useState("0");
 
+  const [selectedChartItem, setSelectedChartItem] = useState<Item | null>(null);
+
   const [search, setSearch]   = useState("");
   const [chartView, setChartView] = useState<"all" | "low">("all");
   const toastCounter = useRef(0);
 
-  // ── AMBIL DATA DARI SERVER SUPABASE ──
+  // ── AMBIL DATA DARI LOCAL STORAGE (VERSI `v5` AGAR AWET) ──
   useEffect(() => {
-    async function loadCloudData() {
-      try {
-        const { data: cloudItems } = await supabase.from("inventory_items").select("*");
-        if (cloudItems && cloudItems.length > 0) {
-          setItems(cloudItems);
-        } else {
-          // Data master awal milik Lingga Autolamp
-          const initial = [
-            { name: "Biled es", stock: 20, min: 15, price: 50000 },
-            { name: "Biled albredt", stock: 15, min: 15, price: 75000 },
-            { name: "Rgb 5 vol", stock: 30, min: 15, price: 15000 },
-            { name: "Shround", stock: 12, min: 15, price: 25000 },
-            { name: "Stepdown 8A", stock: 8, min: 15, price: 12000 },
-            { name: "Modul dmx", stock: 25, min: 15, price: 35000 },
-            { name: "Panel p5", stock: 6, min: 15, price: 85000 },
-            { name: "Panel p4", stock: 9, min: 15, price: 95000 },
-            { name: "Controller d16", stock: 18, min: 15, price: 45000 },
-            { name: "Controled wf2", stock: 11, min: 15, price: 20000 },
-            { name: "Rgb gerak", stock: 22, min: 15, price: 18000 },
-            { name: "Led rol pink", stock: 40, min: 15, price: 30000 },
-            { name: "Led rol merah", stock: 35, min: 15, price: 30000 },
-            { name: "Led rol putih", stock: 28, min: 15, price: 30000 },
-            { name: "Led rol warm white", stock: 19, min: 15, price: 30000 },
-            { name: "Led rol blue ice", stock: 14, min: 15, price: 35000 },
-            { name: "Led rol biru", stock: 33, min: 15, price: 30000 },
-            { name: "Biled 1.5 inch", stock: 50, min: 15, price: 120000 },
-            { name: "Lampu tembak 3 mata", stock: 7, min: 15, price: 40000 },
-            { name: "Rotator pink", stock: 4, min: 15, price: 65000 },
-            { name: "Rotator blue ice", stock: 5, min: 15, price: 65000 },
-            { name: "Led cob 9 mata blue ice", stock: 16, min: 15, price: 15000 },
-            { name: "Led cob 9 mata pink", stock: 13, min: 15, price: 15000 },
-            { name: "Led cob 9 mata biru", stock: 10, min: 15, price: 15000 },
-            { name: "Led cob 9 mata hijau", stock: 8, min: 15, price: 15000 },
-            { name: "Stepdown 5A", stock: 17, min: 15, price: 10000 },
-          ].map(s => ({ ...s, id: uid() }));
-          await supabase.from("inventory_items").insert(initial);
-          setItems(initial);
-        }
-
-        const { data: cloudLogs } = await supabase.from("inventory_logs").select("*").order("created_at", { ascending: false });
-        if (cloudLogs) setLogs(cloudLogs);
-
-      } catch (e) {
-        console.error(e);
-      }
-      setReady(true);
+    try {
+      const savedItems = localStorage.getItem("inv-items-v5");
+      const savedLogs  = localStorage.getItem("inv-logs-v5");
+      
+      if (savedItems) setItems(JSON.parse(savedItems));
+      if (savedLogs) setLogs(JSON.parse(savedLogs));
+    } catch {
+      setLogs([]);
     }
-
-    loadCloudData();
-
-    // ── KONEKSI REALTIME ANTAR HP DAN LAPTOP ──
-    const itemsChannel = supabase.channel("realtime-items")
-      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_items" }, async () => {
-        const { data } = await supabase.from("inventory_items").select("*");
-        if (data) setItems(data);
-      }).subscribe();
-
-    const logsChannel = supabase.channel("realtime-logs")
-      .on("postgres_changes", { event: "*", schema: "public", table: "inventory_logs" }, async () => {
-        const { data } = await supabase.from("inventory_logs").select("*").order("created_at", { ascending: false });
-        if (data) setLogs(data);
-      }).subscribe();
-
-    return () => {
-      supabase.removeChannel(itemsChannel);
-      supabase.removeChannel(logsChannel);
-    };
+    setReady(true);
   }, []);
 
-  async function addLog(type: LogEntry["type"], itemName: string, action: string, details: string) {
-    const newEntry = {
+  // ── SIMPAN SETIAP PERUBAHAN KE LOCAL STORAGE ──
+  useEffect(() => {
+    if (ready) {
+      localStorage.setItem("inv-items-v5", JSON.stringify(items));
+      localStorage.setItem("inv-logs-v5", JSON.stringify(logs));
+    }
+  }, [items, logs, ready]);
+
+  function addLog(type: LogEntry["type"], itemName: string, action: string, details: string) {
+    const newEntry: LogEntry = {
       id: uid(),
       timestamp: getFormattedDate(),
       type,
@@ -173,7 +120,8 @@ export default function StockPage() {
       action,
       details
     };
-    await supabase.from("inventory_logs").insert([newEntry]);
+    // HAPUS BATASAN LOG (TIDAK PAKAI SLICE LAGI)
+    setLogs(prev => [newEntry, ...prev]);
   }
 
   function toast(msg: string, ok = true) {
@@ -182,42 +130,44 @@ export default function StockPage() {
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 2800);
   }
 
-  async function increment(id: string) {
-    const target = items.find(it => it.id === id);
-    if (!target) return;
-    const nextStock = target.stock + 1;
-    
-    await supabase.from("inventory_items").update({ stock: nextStock }).eq("id", id);
-    await addLog("in", target.name, "Tambah 1 Pcs", `Stok berubah dari ${target.stock} ➔ ${nextStock}`);
+  function increment(id: string) {
+    setItems(prev => prev.map(it => {
+      if (it.id === id) {
+        addLog("in", it.name, "Tambah 1 Pcs", `Stok berubah dari ${it.stock} ➔ ${it.stock + 1}`);
+        return { ...it, stock: it.stock + 1 };
+      }
+      return it;
+    }));
   }
 
-  async function decrement(id: string) {
-    const target = items.find(it => it.id === id);
-    if (!target) return;
-    if (target.stock <= 0) { toast(`Stok ${target.name} sudah 0`, false); return; }
-    const nextStock = target.stock - 1;
-
-    await supabase.from("inventory_items").update({ stock: nextStock }).eq("id", id);
-    await addLog("out", target.name, "Kurang 1 Pcs", `Stok berubah dari ${target.stock} ➔ ${nextStock}`);
+  function decrement(id: string) {
+    setItems(prev => prev.map(it => {
+      if (it.id !== id) return it;
+      if (it.stock <= 0) { toast(`Stok ${it.name} sudah 0`, false); return it; }
+      addLog("out", it.name, "Kurang 1 Pcs", `Stok berubah dari ${it.stock} ➔ ${it.stock - 1}`);
+      return { ...it, stock: it.stock - 1 };
+    }));
   }
 
-  async function editStock(id: string, val: string) {
+  function editStock(id: string, val: string) {
     const n = parseInt(val);
     if (isNaN(n) || n < 0) return;
-    const target = items.find(it => it.id === id);
-    if (!target || target.stock === n) return;
-
-    const type = n > target.stock ? "in" : "out";
-    const label = n > target.stock ? "Koreksi Stok (Bertambah)" : "Koreksi Stok (Berkurang)";
-    
-    await supabase.from("inventory_items").update({ stock: n }).eq("id", id);
-    await addLog(type, target.name, label, `Input manual merubah stok dari ${target.stock} ➔ ${n}`);
+    setItems(prev => prev.map(it => {
+      if (it.id === id) {
+        if (it.stock === n) return it;
+        const type = n > it.stock ? "in" : "out";
+        const label = n > it.stock ? "Koreksi Stok (Bertambah)" : "Koreksi Stok (Berkurang)";
+        addLog(type, it.name, label, `Input manual merubah stok dari ${it.stock} ➔ ${n}`);
+        return { ...it, stock: n };
+      }
+      return it;
+    }));
   }
 
-  async function removeItem(id: string, name: string) {
+  function removeItem(id: string, name: string) {
     if (!confirm(`Hapus "${name}" dari stok?`)) return;
-    await supabase.from("inventory_items").delete().eq("id", id);
-    await addLog("out", name, "Hapus Produk", "Barang dihapus permanen dari sistem dashboard");
+    setItems(prev => prev.filter(it => it.id !== id));
+    addLog("out", name, "Hapus Produk", "Barang dihapus permanen dari sistem dashboard");
     toast(`"${name}" dihapus`);
   }
 
@@ -229,7 +179,7 @@ export default function StockPage() {
     setShowEditModal(true);
   }
 
-  async function saveEditItem() {
+  function saveEditItem() {
     if (!editingItem) return;
     const nm = editName.trim();
     if (!nm) { toast("Nama barang wajib diisi", false); return; }
@@ -239,21 +189,27 @@ export default function StockPage() {
     const validMin = isNaN(mn) || mn < 0 ? 15 : mn;
     const validPrice = isNaN(prc) || prc < 0 ? 0 : prc;
 
-    let perubahan: string[] = [];
-    if (editingItem.name !== nm) perubahan.push(`Nama diganti`);
-    if (editingItem.price !== validPrice) perubahan.push(`Harga: ${formatRupiah(editingItem.price)} ➔ ${formatRupiah(validPrice)}`);
-    if (editingItem.min !== validMin) perubahan.push(`Batas Min: ${editingItem.min} ➔ ${validMin}`);
-    
-    await supabase.from("inventory_items").update({ name: nm, min: validMin, price: validPrice }).eq("id", editingItem.id);
-    if (perubahan.length > 0) {
-      await addLog("edit", nm, "Update Spesifikasi", perubahan.join(" | "));
-    }
+    setItems(prev => prev.map(it => {
+      if (it.id === editingItem.id) {
+        let perubahan: string[] = [];
+        if (it.name !== nm) perubahan.push(`Nama diganti`);
+        if (it.price !== validPrice) perubahan.push(`Harga: ${formatRupiah(it.price)} ➔ ${formatRupiah(validPrice)}`);
+        if (it.min !== validMin) perubahan.push(`Batas Min: ${it.min} ➔ ${validMin}`);
+        
+        if (perubahan.length > 0) {
+          addLog("edit", nm, "Update Spesifikasi", perubahan.join(" | "));
+        }
+        return { ...it, name: nm, min: validMin, price: validPrice };
+      }
+      return it;
+    }));
+
     toast(`"${nm}" berhasil diperbarui`);
     setShowEditModal(false);
     setEditingItem(null);
   }
 
-  async function addItem() {
+  function addItem() {
     const nm = newName.trim();
     if (!nm) { toast("Nama barang wajib diisi", false); return; }
     const stk = parseInt(newStock);
@@ -268,19 +224,17 @@ export default function StockPage() {
       min: isNaN(mn) ? 15 : mn,
       price: isNaN(prc) || prc < 0 ? 0 : prc
     };
-
-    await supabase.from("inventory_items").insert([newItem]);
-    await addLog("system", nm, "Registrasi Produk Baru", `Stok awal: ${stk} Pcs | Harga: ${formatRupiah(newItem.price)}`);
-    
+    setItems(prev => [...prev, newItem]);
+    addLog("system", nm, "Registrasi Produk Baru", `Stok awal: ${stk} Pcs | Harga: ${formatRupiah(newItem.price)}`);
     toast(`"${nm}" ditambahkan`);
     setShowModal(false);
     setNewName(""); setNewStock("5"); setNewMin("15"); setNewPrice("0");
   }
 
-  async function clearLogs() {
-    if (!confirm("Hapus semua riwayat log aktivitas toko di database pusat?")) return;
-    await supabase.from("inventory_logs").delete().neq("id", "placeholder");
-    toast("Semua riwayat aktivitas dibersihkan");
+  function clearLogs() {
+    if (!confirm("Apakah Anda yakin ingin menghapus seluruh riwayat aktivitas log ini di browser laptop Anda?")) return;
+    setLogs([]);
+    toast("Seluruh riwayat aktivitas dibersihkan");
   }
 
   const filtered = useMemo(() =>
@@ -303,100 +257,172 @@ export default function StockPage() {
 
   if (!ready) {
     return (
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100vh", background:"#0a0a12", flexDirection:"column", gap:16 }}>
-        <div style={{ width:36, height:36, border:"3px solid #2D1F5E", borderTopColor:"#8B5CF6", borderRadius:"50%", animation:"spin 0.7s linear infinite" }} />
-        <span style={{ color:"#7C3AED", fontFamily:"Inter,sans-serif", fontSize:14 }}>Menghubungkan ke Cloud Lingga Autolamp...</span>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"center",
+        height:"100vh", background:"#0a0a12", flexDirection:"column", gap:16 }}>
+        <div style={{ width:36, height:36, border:"3px solid #2D1F5E",
+          borderTopColor:"#8B5CF6", borderRadius:"50%", animation:"spin 0.7s linear infinite" }} />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        <span style={{ color:"#7C3AED", fontFamily:"Inter,sans-serif", fontSize:14 }}>Memuat dashboard Lingga Autolamp...</span>
       </div>
     );
   }
 
   return (
     <div style={S.root}>
+      {/* ── Global CSS ── */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800;900&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+        html { scroll-behavior: smooth; }
         body { background:#0a0a12; overflow-x:hidden; }
+
         ::-webkit-scrollbar { width:6px; height:6px; }
+        ::-webkit-scrollbar-track { background:transparent; }
         ::-webkit-scrollbar-thumb { background:#3B1F8C; border-radius:99px; }
-        @keyframes spin { to { transform:rotate(360deg) } }
+
+        @keyframes spin    { to { transform:rotate(360deg) } }
+        @keyframes fadeUp  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes slideIn { from{opacity:0;transform:translateX(60px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes pulse2  { 0%,100%{opacity:1} 50%{opacity:.55} }
+
+        .card  { animation: fadeUp .4s ease both; }
+        .row   { transition: background .15s; }
         .row:hover { background: rgba(139,92,246,.07) !important; }
+
+        .bar-fill { transition: width .5s cubic-bezier(.4,0,.2,1); }
+        .bar-container { cursor: pointer; transition: transform 0.2s; }
+        .bar-container:hover { transform: scaleX(1.002); }
+
+        .btn-qty { transition: background .15s, transform .1s; -webkit-tap-highlight-color: transparent; }
         .btn-qty:active { transform: scale(.85); }
-        .modal-overlay { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,.75); backdrop-filter: blur(8px); display:flex; align-items:center; justify-content:center; padding:16px; }
-        .modal-box { background:#13132a; border:1px solid rgba(139,92,246,.3); border-radius:20px; padding:24px; width:100%; max-width:440px; max-height: 90vh; overflow-y: auto; }
-        .inp:focus { outline:none; border-color:#7C3AED !important; box-shadow:0 0 0 3px rgba(124,58,237,.18); }
+
+        .modal-overlay {
+          position:fixed; inset:0; z-index:200;
+          background:rgba(0,0,0,.75);
+          backdrop-filter: blur(8px);
+          display:flex; align-items:center; justify-content:center; padding:16px;
+          animation: fadeUp .2s ease;
+        }
+        .modal-box {
+          background:#13132a;
+          border:1px solid rgba(139,92,246,.3);
+          border-radius:20px;
+          padding:24px;
+          width:100%; max-width:440px;
+          box-shadow: 0 0 60px rgba(139,92,246,.15);
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+
+        .inp:focus { outline:none; border-color:#7C3AED !important;
+          box-shadow:0 0 0 3px rgba(124,58,237,.18); }
+        .inp::placeholder { color:#3d3d6b; }
+
+        .toast-item { animation: slideIn .3s ease; }
+        .chip-active { background:#7C3AED !important; color:#fff !important; }
+        .chip { transition: background .2s, color .2s; }
+
+        .stock-inp:focus { outline:none; border-color:#7C3AED !important; }
+        .stock-inp { text-align:center; }
+        .badge-critical { animation: pulse2 1.8s infinite; }
+
+        /* Responsif di HP */
         @media (max-width:768px) {
           .hide-md { display:none !important; }
           .chart-label { font-size:11px !important; max-width:90px !important; width:90px !important; }
           .row { padding: 14px 12px !important; gap: 8px !important; }
+          .log-meta-box { flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; }
         }
         @media (max-width:640px) {
           .hide-sm { display:none !important; }
           .table-scrollable { overflow-x: auto; WebkitOverflowScrolling: touch; }
+          .search-input-box { width: 100px !important; }
         }
       `}</style>
 
-      {/* HEADER */}
+      {/* ── HEADER ── */}
       <header style={S.header}>
         <div style={S.headerInner}>
-          <div style={S.brandContainer}>
-            <span style={S.logoTextPrimary}>LINGGA</span>
-            <span style={S.logoTextSecondary}>AUTOLAMP</span>
+          <div className="brand-container" style={S.brandContainer}>
+            <div style={S.textWrap}>
+              <span className="logo-text" style={S.logoTextPrimary}>LINGGA</span>
+              <span className="logo-text" style={S.logoTextSecondary}>AUTOLAMP</span>
+            </div>
           </div>
+
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <div style={S.searchWrap}>
-              <input className="inp" style={S.searchInp} placeholder="Cari barang..." value={search} onChange={e => setSearch(e.target.value)} />
+              <input
+                className="inp search-input-box"
+                style={S.searchInp}
+                placeholder="Cari barang..." 
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
             </div>
-            <button style={S.btnAdd} onClick={() => setShowModal(true)}>+ Tambah</button>
+            <button style={S.btnAdd} onClick={() => setShowModal(true)}>
+              <span style={{ fontSize:20, lineHeight:1, fontWeight:"bold" }}>+</span>
+              <span className="hide-sm">Tambah</span>
+            </button>
           </div>
         </div>
       </header>
 
+      {/* ── KONTEN UTAMA ── */}
       <main style={S.main}>
-        {/* STATS */}
+
+        {/* Ringkasan Statistik */}
         <div style={S.statsRow}>
-          <StatCard label="Jenis Barang" value={totalTypes} sub="item terdaftar" accent="#8B5CF6" />
-          <StatCard label="Total Stok" value={totalStock} sub="unit tersedia" accent="#A78BFA" />
-          <StatCard label="Stok Rendah" value={lowCount} sub="perlu order lagi" accent={lowCount > 0 ? "#F59E0B" : "#22C55E"} />
-          <StatCard label="Nilai Inventory" value={formatRupiah(totalValue)} sub="total modal" accent="#10B981" />
+          <StatCard label="Jenis Barang" value={totalTypes.toLocaleString("id-ID")} sub="item terdaftar" accent="#8B5CF6" delay={0}/>
+          <StatCard label="Total Stok" value={totalStock.toLocaleString("id-ID")} sub="unit tersedia" accent="#A78BFA" delay={60}/>
+          <StatCard label="Stok Rendah" value={lowCount.toLocaleString("id-ID")} sub="perlu order lagi" accent={lowCount > 0 ? "#F59E0B" : "#22C55E"} delay={120}/>
+          <StatCard label="Nilai Inventory" value={formatRupiah(totalValue)} sub="total modal" accent="#10B981" delay={180}/>
         </div>
 
-        {/* GRAFIK */}
-        <section style={S.card}>
+        {/* ── Chart Grafis ── */}
+        <section className="card" style={{ ...S.card, animationDelay:"180ms" }}>
           <div style={S.cardHead}>
             <div>
-              <div style={S.cardTitle}>Grafik Batas Stok Kontrol</div>
-              <div style={S.cardSub}>Sinkronisasi Cloud Aktif Terintegrasi</div>
+              <div style={S.cardTitle}>Grafik Kontrol Stok</div>
+              <div style={S.cardSub}>
+                {chartView === "all" ? `Semua ${items.length} item` : `${lowCount} item stok rendah`} · <span style={{color: "#A78BFA"}}>Klik grafis untuk info detail</span>
+              </div>
             </div>
-            <div style={{ display:"flex", gap:6 }}>
+            <div style={{ display:"flex", gap:6, flexShrink:0 }}>
               {(["all","low"] as const).map(v => (
-                <button key={v} style={S.chip(chartView === v)} onClick={() => setChartView(v)}>{v === "all" ? "Semua" : "⚠ Rendah"}</button>
+                <button
+                  key={v}
+                  className={`chip ${chartView === v ? "chip-active" : ""}`}
+                  style={S.chip(chartView === v)}
+                  onClick={() => setChartView(v)}
+                >
+                  {v === "all" ? "Tampilkan Semua" : "⚠ Stok Rendah"}
+                </button>
               ))}
             </div>
           </div>
+
           <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
             {chartItems.map((it) => {
-              const pct = maxStock > 0 ? (it.stock / maxStock) * 100 : 0;
-              const h = stockHealth(it.stock, it.min);
+              const pct   = maxStock > 0 ? (it.stock / maxStock) * 100 : 0;
+              const h     = stockHealth(it.stock, it.min);
               return (
-                <div key={it.id} style={{ display:"flex", alignItems:"center", gap:12 }}>
-                  <div className="chart-label" style={{ width:150, fontSize:13, color:"#A78BFA", textOverflow:"ellipsis", overflow:"hidden", whiteSpace:"nowrap", textAlign:"right" }}>{it.name}</div>
-                  <div style={{ flex:1, height:20, background:"rgba(255,255,255,.03)", borderRadius:6, overflow:"hidden" }}>
-                    <div style={{ height:"100%", width:`${pct}%`, background:HEALTH_COLOR[h], borderRadius:6 }} />
+                <div key={it.id} className="bar-container" onClick={() => setSelectedChartItem(it)} style={{ display:"flex", alignItems:"center", gap:12 }}>
+                  <div className="chart-label" style={{ width:150, minWidth:100, flexShrink:0, fontSize:13, color:"#A78BFA", fontWeight: 500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", textAlign:"right" }}>{it.name}</div>
+                  <div style={{ flex:1, height:26, background:"rgba(255,255,255,.03)", borderRadius:6, overflow:"hidden", position:"relative" }}>
+                    <div className="bar-fill" style={{ height:"100%", width:`${pct}%`, background:`linear-gradient(90deg, ${HEALTH_COLOR[h]}CC, ${HEALTH_COLOR[h]})`, borderRadius:6, boxShadow:`0 0 10px ${HEALTH_GLOW[h]}` }} />
                   </div>
-                  <div style={{ width:40, textAlign:"right", fontSize:14, fontWeight:700, color: HEALTH_COLOR[h] }}>{it.stock}</div>
+                  <div style={{ width:40, textAlign:"right", flexShrink:0, fontSize:14, fontWeight:700, color: HEALTH_COLOR[h] }}>{it.stock}</div>
                 </div>
               );
             })}
           </div>
         </section>
 
-        {/* TABEL UTAMA */}
-        <section style={{ ...S.card, padding:0 }}>
+        {/* ── Tabel Utama Manajemen Stok ── */}
+        <section className="card" style={{ ...S.card, padding:0, overflow:"hidden", animationDelay:"240ms" }}>
           <div style={{ ...S.cardHead, padding:"24px 24px 16px" }}>
-            <div>
-              <div style={S.cardTitle}>Manajemen Stok Utama Toko</div>
-              <div style={S.cardSub}>Update otomatis di semua device Laptop & HP</div>
-            </div>
+            <div style={S.cardTitle}>Manajemen Stok Utama Toko</div>
           </div>
           <div className="table-scrollable">
             <div style={{ minWidth: 700 }}>
@@ -408,14 +434,12 @@ export default function StockPage() {
                 <span style={S.colStatus}>Status</span>
                 <span style={S.colActions}>Aksi</span>
               </div>
-              <div>
-                {filtered.map((it) => {
+              <div style={{ maxHeight:450, overflowY:"auto" }}>
+                {filtered.map((it, idx) => {
                   const h = stockHealth(it.stock, it.min);
                   return (
-                    <div key={it.id} className="row" style={{ ...S.tableRow, borderLeft:`4px solid ${HEALTH_COLOR[h]}` }}>
-                      <div style={S.colName}>
-                        <span style={{ fontSize:14, color:"#E9E3FF" }}>{it.name}</span>
-                      </div>
+                    <div key={it.id} className="row" style={{ ...S.tableRow, borderLeft:`4px solid ${HEALTH_COLOR[h]}`, animationDelay:`${idx * 12}ms` }}>
+                      <div style={S.colName}><span style={{ fontSize:14, color:"#E9E3FF" }}>{it.name}</span></div>
                       <div style={S.colPrice}>{formatRupiah(it.price)}</div>
                       <div style={S.colQtyContainer}>
                         <button className="btn-qty" onClick={() => decrement(it.id)} style={S.btnQty("#EF4444","rgba(239,68,68,.15)")}>−</button>
@@ -423,9 +447,7 @@ export default function StockPage() {
                         <button className="btn-qty" onClick={() => increment(it.id)} style={S.btnQty("#22C55E","rgba(34,197,94,.15)")}>+</button>
                       </div>
                       <div style={S.colMin}>{it.min}</div>
-                      <div style={S.colStatus}>
-                        <span style={S.badge(h)}>{h === "ok" ? "✓ Aman" : h === "low" ? "⚠ Rendah" : "✕ Kritis"}</span>
-                      </div>
+                      <div style={S.colStatus}><span style={S.badge(h)}>{h === "ok" ? "✓ Aman" : h === "low" ? "⚠ Rendah" : "✕ Kritis"}</span></div>
                       <div style={S.colActions}>
                         <button onClick={() => openEditModal(it)} style={S.btnEdit}>✏</button>
                         <button onClick={() => removeItem(it.id, it.name)} style={S.btnDel}>🗑</button>
@@ -438,20 +460,20 @@ export default function StockPage() {
           </div>
         </section>
 
-        {/* LOG AKTIVITAS (RIWAYAT AWET DAN CLOUD SINKRON) */}
-        <section style={S.card}>
+        {/* ── KARTU RIWAYAT LOG AKTIVITAS (TANPA BATAS & LOCAL ONLY) ── */}
+        <section className="card" style={{ ...S.card, animationDelay:"300ms", padding: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
             <div>
               <div style={S.cardTitle}>Riwayat Aktivitas Log Toko</div>
-              <div style={S.cardSub}>Mencatat seluruh aktivitas perubahan secara real-time tanpa batas</div>
+              <div style={S.cardSub}>Mencatat seluruh aktivitas perubahan di browser laptop Anda tanpa batas</div>
             </div>
             {logs.length > 0 && (
               <button onClick={clearLogs} style={S.btnResetLog}>Bersihkan Log</button>
             )}
           </div>
-          <div style={{ maxHeight: 350, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ maxHeight: 380, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
             {logs.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "30px 0", color: "#4A4A7A", fontSize: 13 }}>Belum ada log masuk di database pusat.</div>
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#4A4A7A", fontSize: 13 }}>Belum ada log masuk.</div>
             ) : (
               logs.map((log) => {
                 const sty = LOG_STYLES[log.type] || LOG_STYLES.edit;
@@ -462,8 +484,7 @@ export default function StockPage() {
                       <span style={{ fontSize: 11, color: "#4A4A7A" }}>{log.timestamp}</span>
                     </div>
                     <div style={{ flex: 1, fontSize: 13 }}>
-                      <span style={{ color: "#A78BFA", fontWeight: 600, marginRight: 6 }}>{log.itemName}</span>
-                      <span style={{ color: "#E9E3FF" }}>{log.action}</span>
+                      <span style={{ color: "#A78BFA", fontWeight: 600 }}>{log.itemName}</span> {log.action}
                       {log.details && <div style={{ fontSize: 12, color: "#5B5B8A", marginTop: 2 }}>{log.details}</div>}
                     </div>
                   </div>
@@ -474,13 +495,15 @@ export default function StockPage() {
         </section>
       </main>
 
-      {/* MODAL TAMBAH */}
+      <footer style={{ textAlign:"center", padding:"30px", color:"#4A4A7A", fontSize:12 }}>© 2026 LINGGA AUTOLAMP</footer>
+
+      {/* ── MODAL TAMBAH & EDIT ── */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}><div style={{ fontSize:18, fontWeight:700, color:"#FBBF24" }}>Tambah Barang Baru</div><button onClick={() => setShowModal(false)} style={S.btnClose}>✕</button></div>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:24 }}><div style={{ fontSize:18, color:"#FBBF24" }}>Tambah Barang</div><button onClick={() => setShowModal(false)} style={S.btnClose}>✕</button></div>
             <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-              <label style={S.formLabel}>Nama Barang *<input className="inp" style={S.formInput} placeholder="Nama barang" value={newName} onChange={e => setNewName(e.target.value)} /></label>
+              <label style={S.formLabel}>Nama *<input className="inp" style={S.formInput} placeholder="Nama barang" value={newName} onChange={e => setNewName(e.target.value)} /></label>
               <label style={S.formLabel}>Harga (Ribuan)<input className="inp" style={S.formInput} type="number" value={newPrice} onChange={e => setNewPrice(e.target.value)} /></label>
               <label style={S.formLabel}>Stok Awal<input className="inp" style={S.formInput} type="number" value={newStock} onChange={e => setNewStock(e.target.value)} /></label>
               <label style={S.formLabel}>Batas Minimum<input className="inp" style={S.formInput} type="number" value={newMin} onChange={e => setNewMin(e.target.value)} /></label>
@@ -490,14 +513,13 @@ export default function StockPage() {
         </div>
       )}
 
-      {/* MODAL EDIT */}
       {showEditModal && (
         <div className="modal-overlay" onClick={() => { setShowEditModal(false); setEditingItem(null); }}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}><div style={{ fontSize:18, fontWeight:700, color:"#E9E3FF" }}>Edit Spesifikasi Barang</div><button onClick={() => { setShowEditModal(false); setEditingItem(null); }} style={S.btnClose}>✕</button></div>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:24 }}><div style={{ fontSize:18, color:"#E9E3FF" }}>Edit Barang</div><button onClick={() => { setShowEditModal(false); setEditingItem(null); }} style={S.btnClose}>✕</button></div>
             <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
               <label style={S.formLabel}>Nama Produk<input className="inp" style={S.formInput} value={editName} onChange={e => setEditName(e.target.value)} /></label>
-              <label style={S.formLabel}>Harga Baru (Ribuan)<input className="inp" style={S.formInput} type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} /></label>
+              <label style={S.formLabel}>Harga (Ribuan)<input className="inp" style={S.formInput} type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} /></label>
               <label style={S.formLabel}>Batas Minimum<input className="inp" style={S.formInput} type="number" value={editMin} onChange={e => setEditMin(e.target.value)} /></label>
             </div>
             <div style={{ display:"flex", gap:12, justifyContent:"flex-end", marginTop:28 }}><button onClick={() => { setShowEditModal(false); setEditingItem(null); }} style={S.btnCancel}>Batal</button><button onClick={saveEditItem} style={S.btnSave}>Simpan</button></div>
@@ -505,7 +527,23 @@ export default function StockPage() {
         </div>
       )}
 
-      {/* TOAST SYSTEM */}
+      {/* Detail Chart Modal (Tetap Ada) */}
+      {selectedChartItem && (
+        <div className="modal-overlay" onClick={() => setSelectedChartItem(null)}>
+          <div className="modal-box" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:20 }}><div style={{ fontSize:16, color:"#FBBF24" }}>Detail Produk</div><button onClick={() => setSelectedChartItem(null)} style={S.btnClose}>✕</button></div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: "#E9E3FF" }}>{selectedChartItem.name}</div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <div style={{ fontSize: 15, color: "#10B981" }}>{formatRupiah(selectedChartItem.price)}</div>
+                <div style={{ fontSize: 15, color: "#fff", fontWeight: 700 }}>{selectedChartItem.stock} Pcs</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast popup */}
       <div style={{ position:"fixed", bottom:24, right:24, zIndex:300, display:"flex", flexDirection:"column", gap:8 }}>
         {toasts.map(t => (
           <div key={t.id} style={{ background: t.ok ? "#7C3AED" : "#EF4444", padding:"12px 20px", borderRadius:12, fontSize:14 }}>{t.msg}</div>
@@ -540,27 +578,29 @@ const S = {
   colActions: { width: 90, display: "flex", gap: 8 },
   tableHeader: { display:"flex", padding:"12px 24px", borderBottom:"1px solid rgba(139,92,246,.15)", fontSize:11, color:"#5B5B8A", fontWeight:700, gap:8 },
   tableRow: { display:"flex", alignItems:"center", padding:"14px 24px", gap:8, borderBottom:"1px solid rgba(139,92,246,.08)" },
-  btnQty: (color: string, bg: string): React.CSSProperties => ({ width:30, height:30, borderRadius:8, background:bg, color:color, border:"none", fontSize:16, cursor:"pointer" }),
-  stockInp: { width:42, height:30, borderRadius:8, background:"rgba(139,92,246,.06)", border:"1px solid rgba(139,92,246,.25)", color:"#fff", textAlign:"center" as const, fontWeight:700 },
+  btnQty: (color: string, bg: string): React.CSSProperties => ({ width:34, height:34, borderRadius:10, background:bg, color:color, border:"none", fontSize:18, cursor:"pointer" }),
+  stockInp: { width:42, height:34, borderRadius:10, background:"rgba(139,92,246,.06)", border:"1px solid rgba(139,92,246,.25)", color:"#fff", textAlign:"center" as const, fontWeight:700 },
   badge: (h: "ok"|"low"|"critical"): React.CSSProperties => ({ padding:"4px 10px", borderRadius:20, fontSize:11, fontWeight:600, background: h === "ok" ? "rgba(139,92,246,.15)" : h === "low" ? "rgba(245,158,11,.15)" : "rgba(239,68,68,.15)", color: h === "ok" ? "#A78BFA" : h === "low" ? "#FBBF24" : "#FCA5A5" }),
-  btnEdit: { background:"transparent", border:"none", color:"#A78BFA", cursor:"pointer", fontSize:14 },
-  btnDel: { background:"transparent", border:"none", color:"#EF4444", cursor:"pointer", fontSize:14 },
+  btnEdit: { background:"transparent", border:"none", color:"#A78BFA", cursor:"pointer", fontSize:16 },
+  btnDel: { background:"transparent", border:"none", color:"#EF4444", cursor:"pointer", fontSize:16 },
   btnClose: { background:"transparent", border:"none", color:"#8B8BAD", cursor:"pointer" },
   formLabel: { display:"flex", flexDirection:"column" as const, gap:6, fontSize:13, color:"#8B8BAD" },
   formInput: { background:"#0a0a12", border:"1px solid rgba(139,92,246,.25)", borderRadius:10, padding:"12px", color:"#fff" },
-  btnCancel: { padding:"10px 18px", borderRadius:10, background:"transparent", color:"#8B8BAD", border:"1px solid rgba(139,92,246,.2)", cursor:"pointer" },
-  btnSave: { padding:"10px 20px", borderRadius:10, background:"linear-gradient(135deg,#7C3AED,#6025C0)", color:"#fff", border:"none", fontWeight:600, cursor:"pointer" },
-  logRow: { display: "flex", alignItems: "center", gap: 16, padding: "10px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.08)", borderRadius: "10px" },
-  logBadge: (bg: string, text: string): React.CSSProperties => ({ padding: "3px 6px", borderRadius: "6px", fontSize: "10px", fontWeight: 700, background: bg, color: text, minWidth: "90px", textAlign:"center" }),
-  btnResetLog: { padding: "6px 12px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: "8px", color: "#FCA5A5", fontSize: "12px", cursor: "pointer" }
+  btnCancel: { padding:"11px 20px", borderRadius:10, background:"transparent", color:"#8B8BAD", border:"1px solid rgba(139,92,246,.2)", cursor:"pointer" },
+  btnSave: { padding:"11px 22px", borderRadius:10, background:"linear-gradient(135deg,#7C3AED,#6025C0)", color:"#fff", border:"none", fontWeight:600, cursor:"pointer" },
+  logRow: { display: "flex", alignItems: "flex-start", gap: 16, padding: "12px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(139,92,246,0.08)", borderRadius: "12px" },
+  logBadge: (bg: string, text: string): React.CSSProperties => ({ padding: "3px 8px", borderRadius: "6px", fontSize: "10px", fontWeight: 700, background: bg, color: text, minWidth: "90px", display:"inline-block", textAlign:"center" }),
+  btnResetLog: { display: "flex", alignItems: "center", padding: "6px 12px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: "8px", color: "#FCA5A5", fontSize: "12px", cursor: "pointer", fontFamily: "Inter, sans-serif" }
 };
 
-function StatCard({ label, value, sub, accent }: { label: string; value: string | number; sub: string; accent: string }) {
+function StatCard({ label, value, sub, accent, delay }: { label: string; value: string | number; sub: string; accent: string; delay: number; }) {
   return (
-    <div style={{ flex:"1 1 200px", background:"#13132a", border:"1px solid rgba(139,92,246,.15)", borderRadius:16, padding:"20px" }}>
-      <div style={{ fontSize:11, color:"#5B5B8A", textTransform:"uppercase", fontWeight:600 }}>{label}</div>
-      <div style={{ fontSize:20, fontWeight:700, color:accent, marginTop:4 }}>{value}</div>
-      <div style={{ fontSize:11, color:"#4A4A7A", marginTop:2 }}>{sub}</div>
+    <div className="card" style={{ flex:"1 1 220px", background:"#13132a", border:"1px solid rgba(139,92,246,.15)", borderRadius:16, padding:"20px", display:"flex", alignItems:"center", gap:14, animationDelay:`${delay}ms` }}>
+      <div>
+        <div style={{ fontSize:11, color:"#5B5B8A", textTransform:"uppercase", fontWeight:600 }}>{label}</div>
+        <div style={{ fontSize:22, fontWeight:700, color:"#fff", marginTop:2 }}>{value}</div>
+        <div style={{ fontSize:11, color:accent, marginTop:2 }}>{sub}</div>
+      </div>
     </div>
   );
 }
