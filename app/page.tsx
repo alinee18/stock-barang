@@ -148,6 +148,7 @@ export default function StockPage() {
     }));
   }
 
+  // Edit stock via ketik manual
   function editStock(id: string, val: string) {
     const n = parseInt(val);
     if (isNaN(n) || n < 0) return;
@@ -282,7 +283,6 @@ export default function StockPage() {
         @keyframes spin    { to { transform:rotate(360deg) } }
         @keyframes fadeUp  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
         @keyframes slideIn { from{opacity:0;transform:translateX(60px)} to{opacity:1;transform:translateX(0)} }
-        @keyframes pulse2  { 0%,100%{opacity:1} 50%{opacity:.55} }
 
         .card  { animation: fadeUp .4s ease both; }
         .row   { transition: background .15s; }
@@ -325,7 +325,6 @@ export default function StockPage() {
         .stock-inp { text-align:center; }
 
         @media (max-width:768px) {
-          .hide-md { display:none !important; }
           .chart-label { font-size:11px !important; max-width:90px !important; width:90px !important; }
           .row { padding: 14px 12px !important; gap: 8px !important; }
           .log-meta-box { flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; }
@@ -337,25 +336,24 @@ export default function StockPage() {
         }
       `}</style>
 
-      {/* ── HEADER (LOGO ASLI SUDAH DIKEMBALIKAN) ── */}
+      {/* ── HEADER (PERBAIKAN TOTAL NAMA FILE LOGO KAMU) ── */}
       <header style={S.header}>
         <div style={S.headerInner}>
           <div style={{ display: "flex", alignItems: "center" }}>
-            {/* Memanggil file gambar logo asli toko kamu */}
+            {/* Memanggil file logo asli sesuai instruksi kamu */}
             <img 
-              src="/logo.png" 
+              src="/logo-removebg.png" 
               alt="Lingga Autolamp Logo" 
-              style={{ height: "32px", width: "auto", display: "block" }} 
+              style={{ height: "35px", width: "auto", display: "block" }} 
               onError={(e) => {
-                // Alternatif cadangan jika logo.png gagal terload di local dev
+                // Teks cadangan jika file di direktori public kamu hilang
                 e.currentTarget.style.display = 'none';
                 if(e.currentTarget.nextSibling) {
                   (e.currentTarget.nextSibling as HTMLElement).style.display = 'block';
                 }
               }}
             />
-            {/* Teks cadangan otomatis tersembunyi, hanya muncul jika file logo.png hilang */}
-            <div style={{ display: "none", fontFamily: "sans-serif", fontWeight: "bold" }}>
+            <div style={{ display: "none", fontFamily: "sans-serif", fontWeight: "bold", fontSize: 16 }}>
               <span style={{ color: "#fff" }}>LINGGA</span> <span style={{ color: "#FBBF24" }}>AUTOLAMP</span>
             </div>
           </div>
@@ -395,7 +393,7 @@ export default function StockPage() {
             <div>
               <div style={S.cardTitle}>Grafik Batas Stok</div>
               <div style={S.cardSub}>
-                Semua {items.length} item · <span style={{color: "#A78BFA"}}>Klik baris grafis untuk info lengkap</span>
+                Semua {items.length} item · <span style={{color: "#A78BFA"}}>Klik grafis untuk info lengkap</span>
               </div>
             </div>
             <div style={{ display:"flex", gap:6, flexShrink:0 }}>
@@ -429,7 +427,7 @@ export default function StockPage() {
           </div>
         </section>
 
-        {/* ── Tabel Utama Manajemen Stok ── */}
+        {/* ── Tabel Utama ── */}
         <section className="card" style={{ ...S.card, padding:0, overflow:"hidden", animationDelay:"240ms" }}>
           <div style={{ ...S.cardHead, padding:"24px 24px 16px" }}>
             <div style={S.cardTitle}>Manajemen Stok Utama Toko</div>
